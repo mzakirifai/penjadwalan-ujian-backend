@@ -5,6 +5,7 @@ import java.util.List;
 
 public interface ExamScheduleService {
     public List<ExamSchedule> getAllExamSchedules();
+    public List<ExamSchedule> getAllExamSchedulesDetailed();
     public List<ExamSchedule> getExamScheduleBy(String keyword);
     public List<ExamSchedule> getExamSchedules(int page, int size);
     public List<ExamSchedule> getTodayExamSchedules();

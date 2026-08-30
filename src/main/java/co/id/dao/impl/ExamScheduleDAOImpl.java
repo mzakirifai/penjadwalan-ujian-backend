@@ -52,6 +52,25 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
         return schedules;
     }
+    
+    @Override
+    public List<ExamSchedule> getAllExamSchedulesDetailed() {
+        List<ExamSchedule> schedules = new ArrayList<>();
+        String sql = SELECT_JOIN + "ORDER BY ej.id_ujian";
+
+        try (Connection connection = getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+
+            while (resultSet.next()) {
+                schedules.add(mapResultSetToExamSchedule(resultSet));
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+
+        return schedules;
+    }
 
     @Override
     public List<ExamSchedule> getExamScheduleBy(String keyword) {

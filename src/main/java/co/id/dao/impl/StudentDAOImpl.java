@@ -140,6 +140,33 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
 
         return null;
     }
+    
+    @Override
+    public List<Student> getByClassroom(int classroomId) {
+        List<Student> students = new ArrayList<>();
+        String sql = "SELECT s.*, "
+                + "k.id_kelas, k.kode_kelas, k.nama_kelas, k.tingkat "
+                + "FROM mst_siswa s "
+                + "LEFT JOIN mst_kelas k ON s.id_kelas = k.id_kelas "
+                + "WHERE s.id_kelas = ? "
+                + "ORDER BY s.nama_siswa";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, classroomId);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    students.add(mapResultSetToStudent(resultSet));
+                }
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+
+        return students;
+    }
 
     @Override
     public void saveOrUpdate(Student student) {

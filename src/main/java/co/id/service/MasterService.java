@@ -42,6 +42,7 @@ public interface MasterService {
     public List<Student> getStudents(int page, int size);
     public int countStudents();
     public Student getByIdStudent(int id);
+    public List<Student> getStudentsByClassroom(int classroomId);
     public void saveOrUpdateStudent(Student student, String currentUsername);
     public void deleteStudent(int id);
     

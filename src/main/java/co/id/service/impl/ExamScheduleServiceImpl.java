@@ -14,6 +14,11 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     public List<ExamSchedule> getAllExamSchedules() {
         return examScheduleDAO.getAllExamSchedules();
     }
+    
+    @Override
+    public List<ExamSchedule> getAllExamSchedulesDetailed() {
+        return examScheduleDAO.getAllExamSchedulesDetailed();
+    }
 
     @Override
     public List<ExamSchedule> getExamScheduleBy(String keyword) {

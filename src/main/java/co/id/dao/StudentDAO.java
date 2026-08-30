@@ -9,6 +9,7 @@ public interface StudentDAO {
     public List<Student> getStudents(int page, int size);
     public int countStudents();
     public Student getById(int id);
+    public List<Student> getByClassroom(int classroomId);
     public void saveOrUpdate(Student student);
     public void delete(int id);
 }

@@ -10,6 +10,7 @@ public interface ExamParticipantService {
     public List<ExamParticipant> getByExamSchedule(int examScheduleId);
     public List<ExamParticipant> getByStudent(int studentId);
     public int countExamParticipants();
+    public int countByExamSchedule(int examScheduleId);
     public ExamParticipant getById(int id);
     public void save(ExamParticipant examParticipant, String currentUsername, String currentUserRole);
     public void delete(int id, String currentUserRole);

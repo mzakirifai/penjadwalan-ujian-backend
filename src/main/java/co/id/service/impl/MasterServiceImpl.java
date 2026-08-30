@@ -174,6 +174,11 @@ public class MasterServiceImpl implements MasterService{
     public Student getByIdStudent(int id) {
         return studentDAO.getById(id);
     }
+    
+    @Override
+    public List<Student> getStudentsByClassroom(int classroomId) {
+        return studentDAO.getByClassroom(classroomId);
+    }
 
     @Override
     public void saveOrUpdateStudent(Student student, String currentUsername) {

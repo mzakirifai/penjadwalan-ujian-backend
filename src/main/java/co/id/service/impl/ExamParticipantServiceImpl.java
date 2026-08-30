@@ -39,6 +39,11 @@ public class ExamParticipantServiceImpl implements ExamParticipantService{
     public int countExamParticipants() {
         return examParticipantDAO.countExamParticipants();
     }
+    
+    @Override
+    public int countByExamSchedule(int examScheduleId) {
+        return examParticipantDAO.countByExamSchedule(examScheduleId);
+    }
 
     @Override
     public ExamParticipant getById(int id) {
