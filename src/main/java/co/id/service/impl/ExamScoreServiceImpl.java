@@ -114,11 +114,16 @@ public class ExamScoreServiceImpl implements ExamScoreService {
     
     private void ensureCanInputScore(String currentUserRole, Integer currentTeacherId, ExamScore examScore) {
         if ("admin".equalsIgnoreCase(currentUserRole)) {
-            return; // admin bebas
+            return;
         }
 
         if ("guru".equalsIgnoreCase(currentUserRole)) {
+            if (examScore.getExamSchedule() == null || examScore.getExamSchedule().getTeacher() == null) {
+                throw new IllegalArgumentException("Data jadwal ujian tidak lengkap (pengawas tidak diketahui).");
+            }
+
             int scheduleTeacherId = examScore.getExamSchedule().getTeacher().getId();
+
             if (currentTeacherId == null || scheduleTeacherId != currentTeacherId) {
                 throw new SecurityException("Anda hanya bisa menginput nilai untuk ujian yang Anda awasi sendiri.");
             }

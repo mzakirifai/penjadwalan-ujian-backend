@@ -5,6 +5,7 @@ import co.id.dao.ExamParticipantDAO;
 import co.id.model.ExamParticipant;
 import co.id.model.ExamSchedule;
 import co.id.model.Student;
+import co.id.model.Teacher;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,9 +19,11 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
     private static final String SELECT_JOIN =
         "SELECT ep.*, "
         + "ej.kode_ujian, ej.jenis_ujian, ej.tanggal, ej.jam_mulai, ej.jam_selesai, "
+        + "g.id_guru, g.nip, g.nama_guru, "
         + "s.nis, s.nama_siswa "
         + "FROM trx_peserta ep "
         + "LEFT JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
+        + "LEFT JOIN mst_guru g ON ej.id_guru = g.id_guru "
         + "LEFT JOIN mst_siswa s ON ep.id_siswa = s.id_siswa ";
 
     @Override
@@ -379,6 +382,15 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
             }
             if (resultSet.getTime("jam_selesai") != null) {
                 examSchedule.setEndTime(resultSet.getTime("jam_selesai").toLocalTime());
+            }
+
+            int teacherId = resultSet.getInt("id_guru");
+            if (!resultSet.wasNull()) {
+                Teacher teacher = new Teacher();
+                teacher.setId(teacherId);
+                teacher.setNip(resultSet.getString("nip"));
+                teacher.setName(resultSet.getString("nama_guru"));
+                examSchedule.setTeacher(teacher);
             }
 
             examParticipant.setExamSchedule(examSchedule);
