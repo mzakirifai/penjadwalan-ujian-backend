@@ -2,6 +2,9 @@ package co.id.dao.impl;
 
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.ReportDAO;
+import co.id.dao.RoomDAO;
+import co.id.dao.impl.RoomDAOImpl;
+import co.id.model.Room;
 import co.id.model.report.MajorReportItem;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -10,6 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
+    private final RoomDAO roomDAO;
+
+    public ReportDAOImpl() {
+        roomDAO = new RoomDAOImpl();
+    }
 
     @Override
     public List<MajorReportItem> getMajorReport() {
@@ -42,5 +50,10 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
         }
 
         return items;
+    }
+
+    @Override
+    public List<Room> getRoomReport() {
+        return roomDAO.getAllRooms();
     }
 }
