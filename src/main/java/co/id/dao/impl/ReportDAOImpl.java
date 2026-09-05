@@ -3,10 +3,13 @@ package co.id.dao.impl;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.ReportDAO;
 import co.id.dao.RoomDAO;
-import co.id.dao.impl.RoomDAOImpl;
+import co.id.dao.StudentDAO;
+import co.id.dao.TeacherDAO;
 import co.id.model.Major;
 import co.id.model.Room;
+import co.id.model.Student;
 import co.id.model.Subject;
+import co.id.model.Teacher;
 import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.MajorReportItem;
 import java.sql.Connection;
@@ -18,9 +21,13 @@ import java.util.List;
 
 public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     private final RoomDAO roomDAO;
+    private final TeacherDAO teacherDAO;
+    private final StudentDAO studentDAO;
 
     public ReportDAOImpl() {
         roomDAO = new RoomDAOImpl();
+        teacherDAO = new TeacherDAOImpl();
+        studentDAO = new StudentDAOImpl();
     }
 
     @Override
@@ -135,5 +142,15 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
         }
  
         return subjects;
+    }
+
+    @Override
+    public List<Teacher> getTeacherReport() {
+        return teacherDAO.getAllTeachers();
+    }
+    
+    @Override
+    public List<Student> getStudentListReport(int classroomId) {
+        return studentDAO.getByClassroom(classroomId);
     }
 }

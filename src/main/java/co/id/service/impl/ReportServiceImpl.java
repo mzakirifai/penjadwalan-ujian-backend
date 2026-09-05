@@ -3,7 +3,9 @@ package co.id.service.impl;
 import co.id.dao.ReportDAO;
 import co.id.dao.impl.ReportDAOImpl;
 import co.id.model.Room;
+import co.id.model.Student;
 import co.id.model.Subject;
+import co.id.model.Teacher;
 import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.MajorReportItem;
 import co.id.service.ReportService;
@@ -34,5 +36,15 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public List<Subject> getSubjectReport(int majorId) {
         return reportDAO.getSubjectReport(majorId);
+    }
+
+    @Override
+    public List<Teacher> getTeacherReport() {
+        return reportDAO.getTeacherReport();
+    }
+
+    @Override
+    public List<Student> getStudentListReport(int classroomId) {
+        return reportDAO.getStudentListReport(classroomId);
     }
 }
