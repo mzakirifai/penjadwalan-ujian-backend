@@ -6,9 +6,11 @@ import co.id.dao.RoomDAO;
 import co.id.dao.impl.RoomDAOImpl;
 import co.id.model.Major;
 import co.id.model.Room;
+import co.id.model.Subject;
 import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.MajorReportItem;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -101,5 +103,37 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
         }
 
         return items;
+    }
+
+    @Override
+    public List<Subject> getSubjectReport(int majorId) {
+        List<Subject> subjects = new ArrayList<>();
+ 
+        String sql = "SELECT m.kode_mapel, m.nama_mapel, m.tingkat, m.jenis, m.kkm "
+                + "FROM mst_mapel m "
+                + "WHERE m.id_jurusan = ? "
+                + "ORDER BY m.kode_mapel";
+ 
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+ 
+            preparedStatement.setInt(1, majorId);
+ 
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Subject subject = new Subject();
+                    subject.setCode(resultSet.getString("kode_mapel"));
+                    subject.setName(resultSet.getString("nama_mapel"));
+                    subject.setGrade(resultSet.getString("tingkat"));
+                    subject.setType(resultSet.getString("jenis"));
+                    subject.setPassingGrade(resultSet.getInt("kkm"));
+                    subjects.add(subject);
+                }
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+ 
+        return subjects;
     }
 }
