@@ -13,6 +13,7 @@ public interface ExamScheduleDAO {
     public List<ExamSchedule> getTodayExamSchedules();
     public int countExamSchedules();
     public ExamSchedule getById(int id);
+    public List<ExamSchedule> getByPeriod(String examType, String semester, String academicYear);
     public void saveOrUpdate(ExamSchedule examSchedule);
     public void delete(int id);
     public boolean hasConflict(LocalDate date, LocalTime startTime, LocalTime endTime,

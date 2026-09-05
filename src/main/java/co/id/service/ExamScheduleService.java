@@ -11,6 +11,7 @@ public interface ExamScheduleService {
     public List<ExamSchedule> getTodayExamSchedules();
     public int countExamSchedules();
     public ExamSchedule getById(int id);
+    public List<ExamSchedule> getByPeriod(String examType, String semester, String academicYear);
     public void save(ExamSchedule examSchedule, String currentUsername, String currentUserRole);
     public void delete(int id, String currentUserRole);
     public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, String examType,

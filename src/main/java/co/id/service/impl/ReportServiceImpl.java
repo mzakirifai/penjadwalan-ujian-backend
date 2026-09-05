@@ -2,6 +2,7 @@ package co.id.service.impl;
 
 import co.id.dao.ReportDAO;
 import co.id.dao.impl.ReportDAOImpl;
+import co.id.model.ExamSchedule;
 import co.id.model.Room;
 import co.id.model.Student;
 import co.id.model.Subject;
@@ -46,5 +47,10 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public List<Student> getStudentListReport(int classroomId) {
         return reportDAO.getStudentListReport(classroomId);
+    }
+    
+    @Override
+    public List<ExamSchedule> getExamScheduleReport(String examType, String semester, String academicYear) {
+        return reportDAO.getExamScheduleReport(examType, semester, academicYear);
     }
 }

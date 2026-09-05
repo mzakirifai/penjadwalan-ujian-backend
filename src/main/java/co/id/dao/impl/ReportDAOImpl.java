@@ -1,10 +1,12 @@
 package co.id.dao.impl;
 
 import co.id.config.DatabaseConfiguration;
+import co.id.dao.ExamScheduleDAO;
 import co.id.dao.ReportDAO;
 import co.id.dao.RoomDAO;
 import co.id.dao.StudentDAO;
 import co.id.dao.TeacherDAO;
+import co.id.model.ExamSchedule;
 import co.id.model.Major;
 import co.id.model.Room;
 import co.id.model.Student;
@@ -23,11 +25,13 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     private final RoomDAO roomDAO;
     private final TeacherDAO teacherDAO;
     private final StudentDAO studentDAO;
+    private final ExamScheduleDAO examScheduleDAO;
 
     public ReportDAOImpl() {
         roomDAO = new RoomDAOImpl();
         teacherDAO = new TeacherDAOImpl();
         studentDAO = new StudentDAOImpl();
+        examScheduleDAO = new ExamScheduleDAOImpl();
     }
 
     @Override
@@ -152,5 +156,10 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     @Override
     public List<Student> getStudentListReport(int classroomId) {
         return studentDAO.getByClassroom(classroomId);
+    }
+    
+    @Override
+    public List<ExamSchedule> getExamScheduleReport(String examType, String semester, String academicYear) {
+        return examScheduleDAO.getByPeriod(examType, semester, academicYear);
     }
 }

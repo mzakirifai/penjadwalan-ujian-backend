@@ -180,6 +180,32 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
         return null;
     }
+    
+    @Override
+    public List<ExamSchedule> getByPeriod(String examType, String semester, String academicYear) {
+        List<ExamSchedule> schedules = new ArrayList<>();
+        String sql = SELECT_JOIN
+                + "WHERE ej.jenis_ujian = ? AND ej.semester = ? AND ej.tahun_akademik = ? "
+                + "ORDER BY ej.tanggal, ej.jam_mulai";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setString(1, examType);
+            preparedStatement.setString(2, semester);
+            preparedStatement.setString(3, academicYear);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    schedules.add(mapResultSetToExamSchedule(resultSet));
+                }
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+
+        return schedules;
+    }
 
     @Override
     public void saveOrUpdate(ExamSchedule examSchedule) {

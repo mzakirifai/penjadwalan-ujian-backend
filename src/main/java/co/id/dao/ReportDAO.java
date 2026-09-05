@@ -1,5 +1,6 @@
 package co.id.dao;
 
+import co.id.model.ExamSchedule;
 import co.id.model.Room;
 import co.id.model.Student;
 import co.id.model.Subject;
@@ -15,4 +16,6 @@ public interface ReportDAO {
     public List<Subject> getSubjectReport(int majorId);
     public List<Teacher> getTeacherReport();
     public List<Student> getStudentListReport(int classroomId);
+    public List<ExamSchedule> getExamScheduleReport(String examType, 
+            String semester, String academicYear);
 }
