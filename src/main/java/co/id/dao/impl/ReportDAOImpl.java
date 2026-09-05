@@ -4,7 +4,9 @@ import co.id.config.DatabaseConfiguration;
 import co.id.dao.ReportDAO;
 import co.id.dao.RoomDAO;
 import co.id.dao.impl.RoomDAOImpl;
+import co.id.model.Major;
 import co.id.model.Room;
+import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.MajorReportItem;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -55,5 +57,49 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     @Override
     public List<Room> getRoomReport() {
         return roomDAO.getAllRooms();
+    }
+
+    @Override
+    public List<ClassroomReportItem> getClassroomReport() {
+        List<ClassroomReportItem> items = new ArrayList<>();
+
+        String sql = "SELECT k.kode_kelas, k.nama_kelas, k.tingkat, "
+                + "COUNT(s.id_siswa) AS jumlah_siswa, "
+                + "j.id_jurusan, j.kode_jurusan, j.nama_jurusan, j.singkatan "
+                + "FROM mst_kelas k "
+                + "LEFT JOIN mst_jurusan j ON k.id_jurusan = j.id_jurusan "
+                + "LEFT JOIN mst_siswa s ON s.id_kelas = k.id_kelas "
+                + "GROUP BY k.id_kelas, k.kode_kelas, k.nama_kelas, k.tingkat, "
+                + "j.id_jurusan, j.kode_jurusan, j.nama_jurusan, j.singkatan "
+                + "ORDER BY k.kode_kelas";
+
+        try (Connection connection = getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+
+            while (resultSet.next()) {
+                ClassroomReportItem item = new ClassroomReportItem();
+                item.setCode(resultSet.getString("kode_kelas"));
+                item.setName(resultSet.getString("nama_kelas"));
+                item.setGrade(resultSet.getString("tingkat"));
+                item.setStudentCount(resultSet.getInt("jumlah_siswa"));
+
+                int majorId = resultSet.getInt("id_jurusan");
+                if (!resultSet.wasNull()) {
+                    Major major = new Major();
+                    major.setId(majorId);
+                    major.setCode(resultSet.getString("kode_jurusan"));
+                    major.setName(resultSet.getString("nama_jurusan"));
+                    major.setAbbreviation(resultSet.getString("singkatan"));
+                    item.setMajor(major);
+                }
+
+                items.add(item);
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+
+        return items;
     }
 }
