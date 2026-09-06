@@ -6,6 +6,10 @@ import co.id.dao.ReportDAO;
 import co.id.dao.RoomDAO;
 import co.id.dao.StudentDAO;
 import co.id.dao.TeacherDAO;
+import co.id.dao.impl.ExamScheduleDAOImpl;
+import co.id.dao.impl.RoomDAOImpl;
+import co.id.dao.impl.StudentDAOImpl;
+import co.id.dao.impl.TeacherDAOImpl;
 import co.id.model.ExamSchedule;
 import co.id.model.Major;
 import co.id.model.Room;
@@ -13,11 +17,13 @@ import co.id.model.Student;
 import co.id.model.Subject;
 import co.id.model.Teacher;
 import co.id.model.report.ClassroomReportItem;
+import co.id.model.report.ExamScheduleReportItem;
 import co.id.model.report.MajorReportItem;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -119,17 +125,17 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     @Override
     public List<Subject> getSubjectReport(int majorId) {
         List<Subject> subjects = new ArrayList<>();
- 
+
         String sql = "SELECT m.kode_mapel, m.nama_mapel, m.tingkat, m.jenis, m.kkm "
                 + "FROM mst_mapel m "
                 + "WHERE m.id_jurusan = ? "
                 + "ORDER BY m.kode_mapel";
- 
+
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
- 
+
             preparedStatement.setInt(1, majorId);
- 
+
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Subject subject = new Subject();
@@ -144,7 +150,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
         } catch (Exception exception) {
             exception.printStackTrace();
         }
- 
+
         return subjects;
     }
 
@@ -152,14 +158,34 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     public List<Teacher> getTeacherReport() {
         return teacherDAO.getAllTeachers();
     }
-    
+
     @Override
     public List<Student> getStudentListReport(int classroomId) {
         return studentDAO.getByClassroom(classroomId);
     }
-    
+
     @Override
-    public List<ExamSchedule> getExamScheduleReport(String examType, String semester, String academicYear) {
-        return examScheduleDAO.getByPeriod(examType, semester, academicYear);
+    public List<ExamScheduleReportItem> getExamScheduleReport(String examType, String semester, String academicYear) {
+        List<ExamSchedule> schedules = examScheduleDAO.getByPeriod(examType, semester, academicYear);
+        List<ExamScheduleReportItem> items = new ArrayList<>();
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+
+        for (ExamSchedule schedule : schedules) {
+            ExamScheduleReportItem item = new ExamScheduleReportItem();
+
+            item.setDate(schedule.getDate() != null ? schedule.getDate().format(dateFormatter) : "-");
+            item.setStartTime(schedule.getStartTime() != null ? schedule.getStartTime().format(timeFormatter) : "-");
+            item.setEndTime(schedule.getEndTime() != null ? schedule.getEndTime().format(timeFormatter) : "-");
+            item.setSubjectName(schedule.getSubject() != null ? schedule.getSubject().getName() : "-");
+            item.setClassroomName(schedule.getClassroom() != null ? schedule.getClassroom().getName() : "-");
+            item.setRoomName(schedule.getRoom() != null ? schedule.getRoom().getName() : "-");
+            item.setTeacherName(schedule.getTeacher() != null ? schedule.getTeacher().getName() : "-");
+
+            items.add(item);
+        }
+
+        return items;
     }
 }
