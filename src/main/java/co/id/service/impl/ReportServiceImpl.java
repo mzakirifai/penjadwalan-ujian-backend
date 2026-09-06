@@ -9,6 +9,7 @@ import co.id.model.Teacher;
 import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.ExamScheduleReportItem;
 import co.id.model.report.MajorReportItem;
+import co.id.model.report.ParticipantCardReportItem;
 import co.id.service.ReportService;
 import java.util.List;
 
@@ -52,5 +53,10 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public List<ExamScheduleReportItem> getExamScheduleReport(String examType, String semester, String academicYear) {
         return reportDAO.getExamScheduleReport(examType, semester, academicYear);
+    }
+    
+    @Override
+    public List<ParticipantCardReportItem> getParticipantCardReport(int studentId, String examType, String semester, String academicYear) {
+        return reportDAO.getParticipantCardReport(studentId, examType, semester, academicYear);
     }
 }

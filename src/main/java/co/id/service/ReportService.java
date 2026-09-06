@@ -7,6 +7,7 @@ import co.id.model.Teacher;
 import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.ExamScheduleReportItem;
 import co.id.model.report.MajorReportItem;
+import co.id.model.report.ParticipantCardReportItem;
 import java.util.List;
 
 public interface ReportService {
@@ -18,4 +19,6 @@ public interface ReportService {
     public List<Student> getStudentListReport(int classroomId);
     public List<ExamScheduleReportItem> getExamScheduleReport(String examType, 
             String semester, String academicYear);
+    public List<ParticipantCardReportItem> getParticipantCardReport(int studentId, 
+            String examType, String semester, String academicYear);
 }

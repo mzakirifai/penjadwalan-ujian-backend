@@ -1,15 +1,12 @@
 package co.id.dao.impl;
 
 import co.id.config.DatabaseConfiguration;
+import co.id.dao.ExamParticipantDAO;
 import co.id.dao.ExamScheduleDAO;
 import co.id.dao.ReportDAO;
 import co.id.dao.RoomDAO;
 import co.id.dao.StudentDAO;
 import co.id.dao.TeacherDAO;
-import co.id.dao.impl.ExamScheduleDAOImpl;
-import co.id.dao.impl.RoomDAOImpl;
-import co.id.dao.impl.StudentDAOImpl;
-import co.id.dao.impl.TeacherDAOImpl;
 import co.id.model.ExamSchedule;
 import co.id.model.Major;
 import co.id.model.Room;
@@ -19,6 +16,7 @@ import co.id.model.Teacher;
 import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.ExamScheduleReportItem;
 import co.id.model.report.MajorReportItem;
+import co.id.model.report.ParticipantCardReportItem;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -32,12 +30,14 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     private final TeacherDAO teacherDAO;
     private final StudentDAO studentDAO;
     private final ExamScheduleDAO examScheduleDAO;
+    private final ExamParticipantDAO examParticipantDAO;
 
     public ReportDAOImpl() {
         roomDAO = new RoomDAOImpl();
         teacherDAO = new TeacherDAOImpl();
         studentDAO = new StudentDAOImpl();
         examScheduleDAO = new ExamScheduleDAOImpl();
+        examParticipantDAO = new ExamParticipantDAOImpl();
     }
 
     @Override
@@ -186,6 +186,59 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
             items.add(item);
         }
 
+        return items;
+    }
+
+    @Override
+    public List<ParticipantCardReportItem> getParticipantCardReport(int studentId, String examType, String semester, String academicYear) {
+        List<ParticipantCardReportItem> items = new ArrayList<>();
+ 
+        String sql = "SELECT ep.no_peserta, ep.no_kursi, "
+                + "ej.tanggal, ej.jam_mulai, ej.jam_selesai, "
+                + "m.nama_mapel, r.nama_ruangan "
+                + "FROM trx_peserta ep "
+                + "JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
+                + "LEFT JOIN mst_mapel m ON ej.id_mapel = m.id_mapel "
+                + "LEFT JOIN mst_ruangan r ON ej.id_ruangan = r.id_ruangan "
+                + "WHERE ep.id_siswa = ? AND ej.jenis_ujian = ? AND ej.semester = ? AND ej.tahun_akademik = ? "
+                + "ORDER BY ej.tanggal, ej.jam_mulai";
+ 
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+ 
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+ 
+            preparedStatement.setInt(1, studentId);
+            preparedStatement.setString(2, examType);
+            preparedStatement.setString(3, semester);
+            preparedStatement.setString(4, academicYear);
+ 
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    ParticipantCardReportItem item = new ParticipantCardReportItem();
+ 
+                    item.setParticipantNumber(resultSet.getString("no_peserta"));
+                    item.setSeatNumber(resultSet.getString("no_kursi"));
+                    item.setSubjectName(resultSet.getString("nama_mapel"));
+                    item.setRoomName(resultSet.getString("nama_ruangan"));
+ 
+                    java.sql.Date date = resultSet.getDate("tanggal");
+                    item.setDate(date != null ? date.toLocalDate().format(dateFormatter) : "-");
+ 
+                    java.sql.Time startTime = resultSet.getTime("jam_mulai");
+                    item.setStartTime(startTime != null ? startTime.toLocalTime().format(timeFormatter) : "-");
+ 
+                    java.sql.Time endTime = resultSet.getTime("jam_selesai");
+                    item.setEndTime(endTime != null ? endTime.toLocalTime().format(timeFormatter) : "-");
+ 
+                    items.add(item);
+                }
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+ 
         return items;
     }
 }

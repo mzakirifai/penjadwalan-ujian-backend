@@ -1,21 +1,21 @@
 package co.id.model.report;
 
 /**
- * Bean khusus untuk ReportExamSchedule.jrxml.
- * Semua field sengaja dibuat String (tanggal/jam sudah diformat di Java)
- * untuk menghindari bug Jaspersoft Studio yang gagal resolve
- * java.time.LocalDate / java.time.LocalTime sebagai Field Class.
+ * Bean untuk ReportParticipantCard.jrxml.
+ * 1 item = 1 sesi ujian (1 mapel) yang diikuti siswa dalam periode ujian tertentu.
+ * Field tanggal/jam sengaja String (sudah diformat di Java) untuk menghindari
+ * bug Jaspersoft Studio pada java.time.LocalDate/LocalTime.
  */
-public class ExamScheduleReportItem {
+public class ParticipantCardReportItem {
     private String date;
     private String startTime;
     private String endTime;
     private String subjectName;
-    private String classroomName;
     private String roomName;
-    private String teacherName;
+    private String participantNumber;
+    private String seatNumber;
 
-    public ExamScheduleReportItem() {
+    public ParticipantCardReportItem() {
     }
 
     public String getDate() {
@@ -50,14 +50,6 @@ public class ExamScheduleReportItem {
         this.subjectName = subjectName;
     }
 
-    public String getClassroomName() {
-        return classroomName;
-    }
-
-    public void setClassroomName(String classroomName) {
-        this.classroomName = classroomName;
-    }
-
     public String getRoomName() {
         return roomName;
     }
@@ -66,11 +58,19 @@ public class ExamScheduleReportItem {
         this.roomName = roomName;
     }
 
-    public String getTeacherName() {
-        return teacherName;
+    public String getParticipantNumber() {
+        return participantNumber;
     }
 
-    public void setTeacherName(String teacherName) {
-        this.teacherName = teacherName;
+    public void setParticipantNumber(String participantNumber) {
+        this.participantNumber = participantNumber;
+    }
+
+    public String getSeatNumber() {
+        return seatNumber;
+    }
+
+    public void setSeatNumber(String seatNumber) {
+        this.seatNumber = seatNumber;
     }
 }
