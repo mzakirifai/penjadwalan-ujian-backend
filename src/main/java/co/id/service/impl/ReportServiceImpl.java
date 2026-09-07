@@ -7,6 +7,7 @@ import co.id.model.Room;
 import co.id.model.Student;
 import co.id.model.Subject;
 import co.id.model.Teacher;
+import co.id.model.report.ClassScoreRecapItem;
 import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.ExamScheduleReportItem;
 import co.id.model.report.MajorReportItem;
@@ -64,5 +65,10 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public List<ExamScore> getExamResultReport(int examScheduleId) {
         return reportDAO.getExamResultReport(examScheduleId);
+    }
+
+    @Override
+    public List<ClassScoreRecapItem> getClassScoreRecapReport(int classroomId, String examType, String semester, String academicYear) {
+        return reportDAO.getClassScoreRecapReport(classroomId, examType, semester, academicYear);
     }
 }

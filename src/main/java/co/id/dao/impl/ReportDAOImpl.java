@@ -15,6 +15,7 @@ import co.id.model.Room;
 import co.id.model.Student;
 import co.id.model.Subject;
 import co.id.model.Teacher;
+import co.id.model.report.ClassScoreRecapItem;
 import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.ExamScheduleReportItem;
 import co.id.model.report.MajorReportItem;
@@ -250,5 +251,42 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     @Override
     public List<ExamScore> getExamResultReport(int examScheduleId) {
         return examScoreDAO.getByExamSchedule(examScheduleId);
+    }
+
+    @Override
+    public List<ClassScoreRecapItem> getClassScoreRecapReport(int classroomId, String examType, String semester, String academicYear) {
+        List<ClassScoreRecapItem> items = new ArrayList<>();
+ 
+        String sql = "SELECT s.nis, s.nama_siswa, m.nama_mapel, es.nilai "
+                + "FROM trx_nilai es "
+                + "JOIN trx_jadwal ej ON es.id_ujian = ej.id_ujian "
+                + "JOIN mst_siswa s ON es.id_siswa = s.id_siswa "
+                + "JOIN mst_mapel m ON ej.id_mapel = m.id_mapel "
+                + "WHERE ej.id_kelas = ? AND ej.jenis_ujian = ? AND ej.semester = ? AND ej.tahun_akademik = ? "
+                + "ORDER BY s.nama_siswa, m.nama_mapel";
+ 
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+ 
+            preparedStatement.setInt(1, classroomId);
+            preparedStatement.setString(2, examType);
+            preparedStatement.setString(3, semester);
+            preparedStatement.setString(4, academicYear);
+ 
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    ClassScoreRecapItem item = new ClassScoreRecapItem();
+                    item.setNis(resultSet.getString("nis"));
+                    item.setStudentName(resultSet.getString("nama_siswa"));
+                    item.setSubjectName(resultSet.getString("nama_mapel"));
+                    item.setScore(resultSet.getInt("nilai"));
+                    items.add(item);
+                }
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+ 
+        return items;
     }
 }

@@ -5,6 +5,7 @@ import co.id.model.Room;
 import co.id.model.Student;
 import co.id.model.Subject;
 import co.id.model.Teacher;
+import co.id.model.report.ClassScoreRecapItem;
 import co.id.model.report.ClassroomReportItem;
 import co.id.model.report.ExamScheduleReportItem;
 import co.id.model.report.MajorReportItem;
@@ -23,4 +24,6 @@ public interface ReportService {
     public List<ParticipantCardReportItem> getParticipantCardReport(int studentId, 
             String examType, String semester, String academicYear);
     public List<ExamScore> getExamResultReport(int examScheduleId);
+    public List<ClassScoreRecapItem> getClassScoreRecapReport(int classroomId, 
+            String examType, String semester, String academicYear);
 }
