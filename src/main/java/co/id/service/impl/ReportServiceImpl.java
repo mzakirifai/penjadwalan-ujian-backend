@@ -77,4 +77,9 @@ public class ReportServiceImpl implements ReportService {
     public List<ExamParticipant> getAttendanceListReport(int examScheduleId) {
         return reportDAO.getAttendanceListReport(examScheduleId);
     }
+
+    @Override
+    public List<ExamScheduleReportItem> getTeacherScheduleReport(int teacherId, String examType, String semester, String academicYear) {
+        return reportDAO.getTeacherScheduleReport(teacherId, examType, semester, academicYear);
+    }
 }

@@ -195,6 +195,35 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
 
         return items;
     }
+    
+    @Override
+    public List<ExamScheduleReportItem> getTeacherScheduleReport(int teacherId, String examType, String semester, String academicYear) {
+        List<ExamSchedule> schedules = examScheduleDAO.getByTeacherAndPeriod(teacherId, examType, semester, academicYear);
+        return mapToExamScheduleReportItems(schedules);
+    }
+ 
+    private List<ExamScheduleReportItem> mapToExamScheduleReportItems(List<ExamSchedule> schedules) {
+        List<ExamScheduleReportItem> items = new ArrayList<>();
+ 
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+ 
+        for (ExamSchedule schedule : schedules) {
+            ExamScheduleReportItem item = new ExamScheduleReportItem();
+ 
+            item.setDate(schedule.getDate() != null ? schedule.getDate().format(dateFormatter) : "-");
+            item.setStartTime(schedule.getStartTime() != null ? schedule.getStartTime().format(timeFormatter) : "-");
+            item.setEndTime(schedule.getEndTime() != null ? schedule.getEndTime().format(timeFormatter) : "-");
+            item.setSubjectName(schedule.getSubject() != null ? schedule.getSubject().getName() : "-");
+            item.setClassroomName(schedule.getClassroom() != null ? schedule.getClassroom().getName() : "-");
+            item.setRoomName(schedule.getRoom() != null ? schedule.getRoom().getName() : "-");
+            item.setTeacherName(schedule.getTeacher() != null ? schedule.getTeacher().getName() : "-");
+ 
+            items.add(item);
+        }
+ 
+        return items;
+    }
 
     @Override
     public List<ParticipantCardReportItem> getParticipantCardReport(int studentId, String examType, String semester, String academicYear) {

@@ -49,6 +49,11 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     public List<ExamSchedule> getByPeriod(String examType, String semester, String academicYear) {
         return examScheduleDAO.getByPeriod(examType, semester, academicYear);
     }
+    
+    @Override
+    public List<ExamSchedule> getByTeacherAndPeriod(int teacherId, String examType, String semester, String academicYear) {
+        return examScheduleDAO.getByTeacherAndPeriod(teacherId, examType, semester, academicYear);
+    }
 
     @Override
     public void save(ExamSchedule examSchedule, String currentUsername, String currentUserRole) {

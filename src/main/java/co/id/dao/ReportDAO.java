@@ -22,6 +22,8 @@ public interface ReportDAO {
     public List<Student> getStudentListReport(int classroomId);
     public List<ExamScheduleReportItem> getExamScheduleReport(String examType, 
             String semester, String academicYear);
+    public List<ExamScheduleReportItem> getTeacherScheduleReport(int teacherId, 
+            String examType, String semester, String academicYear);
     public List<ParticipantCardReportItem> getParticipantCardReport(int studentId, 
             String examType, String semester, String academicYear);
     public List<ExamScore> getExamResultReport(int examScheduleId);
