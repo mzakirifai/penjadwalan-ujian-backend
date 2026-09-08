@@ -8,6 +8,7 @@ import co.id.dao.ReportDAO;
 import co.id.dao.RoomDAO;
 import co.id.dao.StudentDAO;
 import co.id.dao.TeacherDAO;
+import co.id.model.ExamParticipant;
 import co.id.model.ExamSchedule;
 import co.id.model.ExamScore;
 import co.id.model.Major;
@@ -288,5 +289,10 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
         }
  
         return items;
+    }
+    
+    @Override
+    public List<ExamParticipant> getAttendanceListReport(int examScheduleId) {
+        return examParticipantDAO.getByExamSchedule(examScheduleId);
     }
 }
