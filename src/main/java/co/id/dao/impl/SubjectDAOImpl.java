@@ -19,15 +19,24 @@ public class SubjectDAOImpl extends DatabaseConfiguration implements SubjectDAO{
     @Override
     public List<Subject> getAllSubjects() {
         List<Subject> subjects = new ArrayList<>();
-        String sql = "SELECT * FROM mst_mapel";
+
+        String sql = "SELECT m.*, \n" +
+                "       j.id_jurusan,\n" +
+                "       j.kode_jurusan,\n" +
+                "       j.nama_jurusan,\n" +
+                "       j.singkatan\n" +
+                "FROM mst_mapel m\n" +
+                "LEFT JOIN mst_jurusan j\n" +
+                "       ON m.id_jurusan = j.id_jurusan";
 
         try (Connection connection = getConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(sql)) {
 
             while (resultSet.next()) {
-                subjects.add(mapBasicResultSetToSubject(resultSet));
+                subjects.add(mapResultSetToSubject(resultSet));
             }
+
         } catch (Exception exception) {
             exception.printStackTrace();
         }

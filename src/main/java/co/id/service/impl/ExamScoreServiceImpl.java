@@ -92,6 +92,11 @@ public class ExamScoreServiceImpl implements ExamScoreService {
 
         examScoreDAO.delete(id);
     }
+    
+    @Override
+    public co.id.model.report.PassFailSummary getPassFailSummary(String semester, String academicYear) {
+        return examScoreDAO.getPassFailSummary(semester, academicYear);
+    }
 
     private void ensureIsAdmin(String currentUserRole) {
         if (!"admin".equalsIgnoreCase(currentUserRole)) {

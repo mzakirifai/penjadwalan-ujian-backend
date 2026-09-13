@@ -12,6 +12,9 @@ public interface ExamScoreService {
     public int countExamScores();
     public int countByExamSchedule(int examScheduleId);
     public ExamScore getById(int id);
-    public void save(ExamScore examScore, String currentUsername, String currentUserRole, Integer currentTeacherId);
+    public void save(ExamScore examScore, String currentUsername, String currentUserRole, 
+            Integer currentTeacherId);
     public void delete(int id, String currentUserRole);
+    public co.id.model.report.PassFailSummary getPassFailSummary(String semester, 
+            String academicYear);
 }

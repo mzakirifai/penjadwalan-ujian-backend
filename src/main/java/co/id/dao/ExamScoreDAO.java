@@ -15,4 +15,5 @@ public interface ExamScoreDAO {
     public void saveOrUpdate(ExamScore examScore);
     public void delete(int id);
     public boolean hasScore(int examScheduleId, int studentId, int excludeId);
+    public co.id.model.report.PassFailSummary getPassFailSummary(String semester, String academicYear);
 }

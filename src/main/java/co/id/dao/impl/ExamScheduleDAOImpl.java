@@ -233,6 +233,32 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
         return schedules;
     }
+    
+    @Override
+    public java.util.Map<java.time.LocalDate, Integer> getExamCountPerDay(java.time.LocalDate start, java.time.LocalDate end) {
+        java.util.Map<java.time.LocalDate, Integer> counts = new java.util.LinkedHashMap<>();
+
+        String sql = "SELECT tanggal, COUNT(*) AS jumlah FROM trx_jadwal "
+                + "WHERE tanggal BETWEEN ? AND ? GROUP BY tanggal ORDER BY tanggal";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setDate(1, java.sql.Date.valueOf(start));
+            preparedStatement.setDate(2, java.sql.Date.valueOf(end));
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    java.sql.Date date = resultSet.getDate("tanggal");
+                    counts.put(date.toLocalDate(), resultSet.getInt("jumlah"));
+                }
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+
+        return counts;
+    }
 
     @Override
     public void saveOrUpdate(ExamSchedule examSchedule) {

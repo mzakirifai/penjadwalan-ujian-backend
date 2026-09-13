@@ -359,4 +359,35 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
 
         return examScore;
     }
+    
+    @Override
+    public co.id.model.report.PassFailSummary getPassFailSummary(String semester, String academicYear) {
+        String sql = "SELECT "
+                + "SUM(CASE WHEN n.nilai >= m.kkm THEN 1 ELSE 0 END) AS lulus, "
+                + "SUM(CASE WHEN n.nilai < m.kkm THEN 1 ELSE 0 END) AS tidak_lulus "
+                + "FROM trx_nilai n "
+                + "JOIN trx_jadwal ej ON n.id_ujian = ej.id_ujian "
+                + "JOIN mst_mapel m ON ej.id_mapel = m.id_mapel "
+                + "WHERE ej.semester = ? AND ej.tahun_akademik = ?";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setString(1, semester);
+            preparedStatement.setString(2, academicYear);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return new co.id.model.report.PassFailSummary(
+                        resultSet.getInt("lulus"),
+                        resultSet.getInt("tidak_lulus")
+                    );
+                }
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+
+        return new co.id.model.report.PassFailSummary(0, 0);
+    }
 }

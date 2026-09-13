@@ -56,6 +56,11 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     }
 
     @Override
+    public java.util.Map<java.time.LocalDate, Integer> getExamCountPerDay(java.time.LocalDate start, java.time.LocalDate end) {
+        return examScheduleDAO.getExamCountPerDay(start, end);
+    }
+    
+    @Override
     public void save(ExamSchedule examSchedule, String currentUsername, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
         validate(examSchedule);

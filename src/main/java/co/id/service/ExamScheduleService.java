@@ -12,7 +12,10 @@ public interface ExamScheduleService {
     public int countExamSchedules();
     public ExamSchedule getById(int id);
     public List<ExamSchedule> getByPeriod(String examType, String semester, String academicYear);
-    public List<ExamSchedule> getByTeacherAndPeriod(int teacherId, String examType, String semester, String academicYear);
+    public List<ExamSchedule> getByTeacherAndPeriod(int teacherId, String examType, 
+            String semester, String academicYear);
+    public java.util.Map<java.time.LocalDate, Integer> getExamCountPerDay(java.time.LocalDate start, 
+            java.time.LocalDate end);
     public void save(ExamSchedule examSchedule, String currentUsername, String currentUserRole);
     public void delete(int id, String currentUserRole);
     public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, String examType,
