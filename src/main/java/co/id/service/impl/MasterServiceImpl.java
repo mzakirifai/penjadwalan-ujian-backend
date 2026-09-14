@@ -65,13 +65,15 @@ public class MasterServiceImpl implements MasterService{
     }
 
     @Override
-    public void saveOrUpdateTeacher(Teacher teacher, String currentUsername) {
+    public void saveOrUpdateTeacher(Teacher teacher, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         teacher.setUpdatedBy(currentUsername);
         teacherDAO.saveOrUpdate(teacher);
     }
 
     @Override
-    public void deleteTeacher(int id) {
+    public void deleteTeacher(int id, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         teacherDAO.delete(id);
     }
 
@@ -102,13 +104,15 @@ public class MasterServiceImpl implements MasterService{
     }
 
     @Override
-    public void saveOrUpdateMajor(Major major, String currentUsername) {
+    public void saveOrUpdateMajor(Major major, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         major.setUpdatedBy(currentUsername);
         majorDAO.saveOrUpdate(major);
     }
 
     @Override
-    public void deleteMajor(int id) {
+    public void deleteMajor(int id, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         majorDAO.delete(id);
     }
 
@@ -139,13 +143,15 @@ public class MasterServiceImpl implements MasterService{
     }
 
     @Override
-    public void saveOrUpdateClassroom(Classroom classroom, String currentUsername) {
+    public void saveOrUpdateClassroom(Classroom classroom, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         classroom.setUpdatedBy(currentUsername);
         classroomDAO.saveOrUpdate(classroom);
     }
 
     @Override
-    public void deleteClassroom(int id) {
+    public void deleteClassroom(int id, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         classroomDAO.delete(id);
     }
 
@@ -181,13 +187,15 @@ public class MasterServiceImpl implements MasterService{
     }
 
     @Override
-    public void saveOrUpdateStudent(Student student, String currentUsername) {
+    public void saveOrUpdateStudent(Student student, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         student.setUpdatedBy(currentUsername);
         studentDAO.saveOrUpdate(student);
     }
 
     @Override
-    public void deleteStudent(int id) {
+    public void deleteStudent(int id, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         studentDAO.delete(id);
     }
 
@@ -218,13 +226,15 @@ public class MasterServiceImpl implements MasterService{
     }
 
     @Override
-    public void saveOrUpdateSubject(Subject subject, String currentUsername) {
+    public void saveOrUpdateSubject(Subject subject, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         subject.setUpdatedBy(currentUsername);
         subjectDAO.saveOrUpdate(subject);
     }
 
     @Override
-    public void deleteSubject(int id) {
+    public void deleteSubject(int id, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         subjectDAO.delete(id);
     }
 
@@ -255,13 +265,21 @@ public class MasterServiceImpl implements MasterService{
     }
 
     @Override
-    public void saveOrUpdateRoom(Room room, String currentUsername) {
+    public void saveOrUpdateRoom(Room room, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         room.setUpdatedBy(currentUsername);
         roomDAO.saveOrUpdate(room);
     }
 
     @Override
-    public void deleteRoom(int id) {
+    public void deleteRoom(int id, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
         roomDAO.delete(id);
+    }
+    
+    private void ensureIsAdmin(String currentUserRole) {
+        if (!"admin".equalsIgnoreCase(currentUserRole)) {
+            throw new SecurityException("Hanya admin yang boleh mengubah data master.");
+        }
     }
 }
