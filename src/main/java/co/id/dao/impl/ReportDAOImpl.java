@@ -134,9 +134,9 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
         List<Subject> subjects = new ArrayList<>();
 
         String sql = "SELECT m.kode_mapel, m.nama_mapel, m.tingkat, m.jenis, m.kkm "
-                + "FROM mst_mapel m "
-                + "WHERE m.id_jurusan = ? "
-                + "ORDER BY m.kode_mapel";
+            + "FROM mst_mapel m "
+            + "WHERE m.id_jurusan = ? OR m.id_jurusan IS NULL "
+            + "ORDER BY m.kode_mapel";
 
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
