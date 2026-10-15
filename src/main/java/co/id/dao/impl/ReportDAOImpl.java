@@ -133,7 +133,9 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     public List<Subject> getSubjectReport(int majorId) {
         List<Subject> subjects = new ArrayList<>();
 
-        String sql = "SELECT m.kode_mapel, m.nama_mapel, m.tingkat, m.jenis, m.kkm "
+        String sql = "SELECT m.kode_mapel, m.nama_mapel, "
+            + "COALESCE(m.tingkat, 'Semua') AS tingkat, "
+            + "m.jenis, m.kkm "
             + "FROM mst_mapel m "
             + "WHERE m.id_jurusan = ? OR m.id_jurusan IS NULL "
             + "ORDER BY m.kode_mapel";
