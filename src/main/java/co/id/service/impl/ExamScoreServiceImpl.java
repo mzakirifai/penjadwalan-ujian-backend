@@ -1,9 +1,14 @@
 package co.id.service.impl;
 
 import co.id.dao.ExamParticipantDAO;
+import co.id.dao.ExamScheduleDAO;
 import co.id.dao.ExamScoreDAO;
+import co.id.dao.TeachingAssignmentDAO;
 import co.id.dao.impl.ExamParticipantDAOImpl;
+import co.id.dao.impl.ExamScheduleDAOImpl;
 import co.id.dao.impl.ExamScoreDAOImpl;
+import co.id.dao.impl.TeachingAssignmentDAOImpl;
+import co.id.model.ExamSchedule;
 import co.id.model.ExamScore;
 import co.id.service.ExamScoreService;
 import java.util.List;
@@ -12,6 +17,8 @@ public class ExamScoreServiceImpl implements ExamScoreService {
 
     private final ExamScoreDAO examScoreDAO = new ExamScoreDAOImpl();
     private final ExamParticipantDAO examParticipantDAO = new ExamParticipantDAOImpl();
+    private final ExamScheduleDAO examScheduleDAO = new ExamScheduleDAOImpl();
+    private final TeachingAssignmentDAO teachingAssignmentDAO = new TeachingAssignmentDAOImpl();
 
     private static final int MIN_SCORE = 0;
     private static final int MAX_SCORE = 100;
@@ -123,14 +130,22 @@ public class ExamScoreServiceImpl implements ExamScoreService {
         }
 
         if ("guru".equalsIgnoreCase(currentUserRole)) {
-            if (examScore.getExamSchedule() == null || examScore.getExamSchedule().getTeacher() == null) {
-                throw new IllegalArgumentException("Data jadwal ujian tidak lengkap (pengawas tidak diketahui).");
+            if (examScore.getExamSchedule() == null || examScore.getExamSchedule().getId() == 0) {
+                throw new IllegalArgumentException("Data jadwal ujian tidak lengkap.");
             }
 
-            int scheduleTeacherId = examScore.getExamSchedule().getTeacher().getId();
+            // Ambil ulang jadwal dari database agar mapel & kelasnya pasti lengkap
+            ExamSchedule schedule = examScheduleDAO.getById(examScore.getExamSchedule().getId());
+            if (schedule == null || schedule.getSubject() == null || schedule.getClassroom() == null) {
+                throw new IllegalArgumentException("Data jadwal ujian tidak lengkap (mapel/kelas tidak diketahui).");
+            }
 
-            if (currentTeacherId == null || scheduleTeacherId != currentTeacherId) {
-                throw new SecurityException("Anda hanya bisa menginput nilai untuk ujian yang Anda awasi sendiri.");
+            // Guru hanya boleh menginput nilai untuk mapel & kelas yang diampunya
+            boolean isTeachingAssignment = currentTeacherId != null && teachingAssignmentDAO.isAssigned(
+                    currentTeacherId, schedule.getSubject().getId(), schedule.getClassroom().getId());
+
+            if (!isTeachingAssignment) {
+                throw new SecurityException("Anda hanya bisa menginput nilai untuk mata pelajaran dan kelas yang Anda ajar.");
             }
             return;
         }
