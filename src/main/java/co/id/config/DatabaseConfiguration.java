@@ -39,8 +39,8 @@ public class DatabaseConfiguration {
     }
     
     private static InputStream openConfig() throws IOException {
-        String path = System.getProperty("app.config");
-        if (path != null && Files.exists(Path.of(path))) {
+        String path = System.getProperty("app.config", "config/connection.properties");
+        if (Files.exists(Path.of(path))) {
             return Files.newInputStream(Path.of(path));
         }
         return DatabaseConfiguration.class.getClassLoader().getResourceAsStream("connection.properties");
