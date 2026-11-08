@@ -10,6 +10,7 @@ public interface StudentDAO {
     public int countStudents();
     public Student getById(int id);
     public List<Student> getByClassroom(int classroomId);
+    public boolean isNisnTaken(String nisn, int excludeId);
     public void saveOrUpdate(Student student);
     public void delete(int id);
 }

@@ -189,8 +189,23 @@ public class MasterServiceImpl implements MasterService{
     @Override
     public void saveOrUpdateStudent(Student student, String currentUsername, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
+        validateStudent(student);
         student.setUpdatedBy(currentUsername);
         studentDAO.saveOrUpdate(student);
+    }
+
+    private void validateStudent(Student student) {
+        String nisn = student.getNisn() == null ? "" : student.getNisn().trim();
+        if (nisn.isEmpty()) {
+            throw new IllegalArgumentException("NISN wajib diisi.");
+        }
+        if (!nisn.matches("\\d{10}")) {
+            throw new IllegalArgumentException("NISN harus 10 digit angka.");
+        }
+        student.setNisn(nisn);
+        if (studentDAO.isNisnTaken(nisn, student.getId())) {
+            throw new IllegalStateException("NISN \"" + nisn + "\" sudah dipakai siswa lain.");
+        }
     }
 
     @Override

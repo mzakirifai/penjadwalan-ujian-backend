@@ -5,10 +5,9 @@ import java.time.LocalDateTime;
 public class Student {
     private int id;
     private String nis;
+    private String nisn;
     private String name;
     private String gender;
-    private String phoneNumber;
-    private String address;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String updatedBy;
@@ -19,13 +18,12 @@ public class Student {
     public Student() {
     }
 
-    public Student(int id, String nis, String name, String gender, String phoneNumber, String address, LocalDateTime createdAt, LocalDateTime updatedAt, String updatedBy, Classroom classroom) {
+    public Student(int id, String nis, String nisn, String name, String gender, LocalDateTime createdAt, LocalDateTime updatedAt, String updatedBy, Classroom classroom) {
         this.id = id;
         this.nis = nis;
+        this.nisn = nisn;
         this.name = name;
         this.gender = gender;
-        this.phoneNumber = phoneNumber;
-        this.address = address;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.updatedBy = updatedBy;
@@ -48,6 +46,14 @@ public class Student {
         this.nis = nis;
     }
 
+    public String getNisn() {
+        return nisn;
+    }
+
+    public void setNisn(String nisn) {
+        this.nisn = nisn;
+    }
+
     public String getName() {
         return name;
     }
@@ -62,22 +68,6 @@ public class Student {
 
     public void setGender(String gender) {
         this.gender = gender;
-    }
-
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -116,6 +106,6 @@ public class Student {
     
     @Override
     public String toString(){
-        return "Siswa[id ="+id+", nis ="+nis+", nama_siswa ="+name+", jenis_kelamin ="+gender+", nomor_hp ="+phoneNumber+", alamat ="+address+", tanggal_buat ="+createdAt+", tanggal_update ="+updatedAt+", dibuat_oleh="+updatedBy+"]";
+        return "Siswa[id ="+id+", nis ="+nis+", nisn ="+nisn+", nama_siswa ="+name+", jenis_kelamin ="+gender+", tanggal_buat ="+createdAt+", tanggal_update ="+updatedAt+", dibuat_oleh="+updatedBy+"]";
     }
 }

@@ -44,13 +44,14 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                 + "k.tingkat "
                 + "FROM mst_siswa s "
                 + "LEFT JOIN mst_kelas k ON s.id_kelas = k.id_kelas "
-                + "WHERE s.nama_siswa LIKE ? OR s.nis LIKE ?";
+                + "WHERE s.nama_siswa LIKE ? OR s.nis LIKE ? OR s.nisn LIKE ?";
 
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             preparedStatement.setString(1, "%" + keyword + "%");
             preparedStatement.setString(2, "%" + keyword + "%");
+            preparedStatement.setString(3, "%" + keyword + "%");
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -169,46 +170,60 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
     }
 
     @Override
+    public boolean isNisnTaken(String nisn, int excludeId) {
+        String sql = "SELECT COUNT(*) AS total FROM mst_siswa WHERE nisn = ? AND id_siswa <> ?";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, nisn);
+            preparedStatement.setInt(2, excludeId);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt("total") > 0;
+                }
+            }
+        } catch (Exception exception) {
+            // Kalau pengecekan gagal, hentikan penyimpanan supaya tidak ada NISN ganda yang lolos
+            throw new IllegalStateException("Gagal memeriksa NISN: " + exception.getMessage(), exception);
+        }
+
+        return false;
+    }
+
+    @Override
     public void saveOrUpdate(Student student) {
-        String sqlInsert = "INSERT INTO mst_siswa(nis, nama_siswa, id_kelas, jenis_kelamin, nomor_hp, alamat, diubah_oleh) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        String sqlUpdate = "UPDATE mst_siswa SET nis = ?, nama_siswa = ?, id_kelas = ?, jenis_kelamin = ?, nomor_hp = ?, alamat = ?, diubah_oleh = ? WHERE id_siswa = ?";
-        
+        String sqlInsert = "INSERT INTO mst_siswa(nis, nisn, nama_siswa, id_kelas, jenis_kelamin, diubah_oleh) VALUES (?, ?, ?, ?, ?, ?)";
+        String sqlUpdate = "UPDATE mst_siswa SET nis = ?, nisn = ?, nama_siswa = ?, id_kelas = ?, jenis_kelamin = ?, diubah_oleh = ? WHERE id_siswa = ?";
+
         try (Connection connection = getConnection()) {
             if (student.getId() == 0) {
                 try (PreparedStatement preparedStatement = connection.prepareStatement(sqlInsert)) {
                     preparedStatement.setString(1, student.getNis());
-                    preparedStatement.setString(2, student.getName());
-
+                    preparedStatement.setString(2, student.getNisn());
+                    preparedStatement.setString(3, student.getName());
                     if (student.getClassroom() != null) {
-                        preparedStatement.setInt(3, student.getClassroom().getId());
+                        preparedStatement.setInt(4, student.getClassroom().getId());
                     } else {
-                        preparedStatement.setNull(3, Types.INTEGER);
+                        preparedStatement.setNull(4, Types.INTEGER);
                     }
-
-                    preparedStatement.setString(4, student.getGender());
-                    preparedStatement.setString(5, student.getPhoneNumber());
-                    preparedStatement.setString(6, student.getAddress());
-                    preparedStatement.setString(7, student.getUpdatedBy());
-
+                    preparedStatement.setString(5, student.getGender());
+                    preparedStatement.setString(6, student.getUpdatedBy());
                     preparedStatement.executeUpdate();
                 }
             } else {
                 try (PreparedStatement preparedStatement = connection.prepareStatement(sqlUpdate)) {
                     preparedStatement.setString(1, student.getNis());
-                    preparedStatement.setString(2, student.getName());
-
+                    preparedStatement.setString(2, student.getNisn());
+                    preparedStatement.setString(3, student.getName());
                     if (student.getClassroom() != null) {
-                        preparedStatement.setInt(3, student.getClassroom().getId());
+                        preparedStatement.setInt(4, student.getClassroom().getId());
                     } else {
-                        preparedStatement.setNull(3, Types.INTEGER);
+                        preparedStatement.setNull(4, Types.INTEGER);
                     }
-
-                    preparedStatement.setString(4, student.getGender());
-                    preparedStatement.setString(5, student.getPhoneNumber());
-                    preparedStatement.setString(6, student.getAddress());
-                    preparedStatement.setString(7, student.getUpdatedBy());
-                    preparedStatement.setInt(8, student.getId());
-
+                    preparedStatement.setString(5, student.getGender());
+                    preparedStatement.setString(6, student.getUpdatedBy());
+                    preparedStatement.setInt(7, student.getId());
                     preparedStatement.executeUpdate();
                 }
             }
@@ -236,10 +251,9 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
         Student student = new Student();
         student.setId(resultSet.getInt("id_siswa"));
         student.setNis(resultSet.getString("nis"));
+        student.setNisn(resultSet.getString("nisn"));
         student.setName(resultSet.getString("nama_siswa"));
         student.setGender(resultSet.getString("jenis_kelamin"));
-        student.setPhoneNumber(resultSet.getString("nomor_hp"));
-        student.setAddress(resultSet.getString("alamat"));
 
         Timestamp createdAt = resultSet.getTimestamp("tanggal_buat");
         if (createdAt != null) {
