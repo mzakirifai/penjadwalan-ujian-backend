@@ -195,6 +195,15 @@ public class MasterServiceImpl implements MasterService{
     }
 
     private void validateStudent(Student student) {
+        String nis = student.getNis() == null ? "" : student.getNis().trim();
+        if (nis.isEmpty()) {
+            throw new IllegalArgumentException("NIS wajib diisi.");
+        }
+        student.setNis(nis);
+        if (studentDAO.isNisTaken(nis, student.getId())) {
+            throw new IllegalStateException("NIS \"" + nis + "\" sudah dipakai siswa lain.");
+        }
+
         String nisn = student.getNisn() == null ? "" : student.getNisn().trim();
         if (nisn.isEmpty()) {
             throw new IllegalArgumentException("NISN wajib diisi.");

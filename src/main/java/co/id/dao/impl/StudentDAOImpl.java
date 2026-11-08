@@ -170,6 +170,28 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
     }
 
     @Override
+    public boolean isNisTaken(String nis, int excludeId) {
+        String sql = "SELECT COUNT(*) AS total FROM mst_siswa WHERE nis = ? AND id_siswa <> ?";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, nis);
+            preparedStatement.setInt(2, excludeId);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt("total") > 0;
+                }
+            }
+        } catch (Exception exception) {
+            // Kalau pengecekan gagal, hentikan penyimpanan supaya tidak ada NIS ganda yang lolos
+            throw new IllegalStateException("Gagal memeriksa NIS: " + exception.getMessage(), exception);
+        }
+
+        return false;
+    }
+
+    @Override
     public boolean isNisnTaken(String nisn, int excludeId) {
         String sql = "SELECT COUNT(*) AS total FROM mst_siswa WHERE nisn = ? AND id_siswa <> ?";
 
