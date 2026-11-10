@@ -159,7 +159,7 @@ public class MajorDAOImpl extends DatabaseConfiguration implements MajorDAO {
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            throw new IllegalStateException("Gagal menyimpan data ke database: " + exception.getMessage(), exception);
         }
     }
 
@@ -173,7 +173,7 @@ public class MajorDAOImpl extends DatabaseConfiguration implements MajorDAO {
 
             preparedStatement.executeUpdate();
         } catch (Exception exception) {
-            exception.printStackTrace();
+            throw new IllegalStateException("Gagal menghapus data: " + exception.getMessage(), exception);
         }
     }
 

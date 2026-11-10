@@ -70,7 +70,7 @@ public class SchoolSettingsDAOImpl extends DatabaseConfiguration implements Scho
 
             preparedStatement.executeUpdate();
         } catch (Exception exception) {
-            exception.printStackTrace();
+            throw new IllegalStateException("Gagal menyimpan data ke database: " + exception.getMessage(), exception);
         }
     }
 }

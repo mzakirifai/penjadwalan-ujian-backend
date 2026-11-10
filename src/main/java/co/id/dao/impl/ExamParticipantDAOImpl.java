@@ -254,7 +254,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 connection.setAutoCommit(true);
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            throw new IllegalStateException("Gagal menyimpan data ke database: " + exception.getMessage(), exception);
         }
     }
 
@@ -268,7 +268,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
 
             preparedStatement.executeUpdate();
         } catch (Exception exception) {
-            exception.printStackTrace();
+            throw new IllegalStateException("Gagal menghapus data: " + exception.getMessage(), exception);
         }
     }
 
