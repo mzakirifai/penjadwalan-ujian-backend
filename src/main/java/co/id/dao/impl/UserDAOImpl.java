@@ -148,9 +148,9 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
 
     @Override
     public void saveOrUpdate(User user) {
-        String sqlInsert = "INSERT INTO users(username, password, full_name, role, id_guru, photo_path, diubah_oleh) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        String sqlUpdate = "UPDATE users SET username = ?, full_name = ?, role = ?, id_guru = ?, photo_path = ?, diubah_oleh = ? WHERE user_id = ?";
-
+        String sqlInsert = "INSERT INTO users(username, password, full_name, role, id_guru, photo_path, photo_data, diubah_oleh) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sqlUpdate = "UPDATE users SET username = ?, full_name = ?, role = ?, id_guru = ?, photo_path = ?, photo_data = ?, diubah_oleh = ? WHERE user_id = ?";
+        
         try (Connection connection = getConnection()) {
             connection.setAutoCommit(false);
 
@@ -169,7 +169,8 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                         }
 
                         preparedStatement.setString(6, user.getPhotoPath());
-                        preparedStatement.setString(7, user.getUpdatedBy());
+                        preparedStatement.setBytes(7, user.getPhotoData());
+                        preparedStatement.setString(8, user.getUpdatedBy());
 
                         preparedStatement.executeUpdate();
 
@@ -192,8 +193,9 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                         }
 
                         preparedStatement.setString(5, user.getPhotoPath());
-                        preparedStatement.setString(6, user.getUpdatedBy());
-                        preparedStatement.setInt(7, user.getId());
+                        preparedStatement.setBytes(6, user.getPhotoData());
+                        preparedStatement.setString(7, user.getUpdatedBy());
+                        preparedStatement.setInt(8, user.getId());
 
                         preparedStatement.executeUpdate();
                     }
@@ -294,6 +296,7 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
         user.setFullName(resultSet.getString("full_name"));
         user.setRole(resultSet.getString("role"));
         user.setPhotoPath(resultSet.getString("photo_path"));
+        user.setPhotoData(resultSet.getBytes("photo_data"));
 
         Timestamp createdAt = resultSet.getTimestamp("tanggal_buat");
         if (createdAt != null) {

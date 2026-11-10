@@ -9,6 +9,7 @@ public class User {
     private String fullName;
     private String role;
     private String photoPath;
+    private byte[] photoData;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String updatedBy;
@@ -78,6 +79,14 @@ public class User {
 
     public void setPhotoPath(String photoPath) {
         this.photoPath = photoPath;
+    }
+    
+    public byte[] getPhotoData() {
+        return photoData;
+    }
+
+    public void setPhotoData(byte[] photoData) {
+        this.photoData = photoData;
     }
 
     public LocalDateTime getCreatedAt() {
