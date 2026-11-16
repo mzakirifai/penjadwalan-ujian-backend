@@ -12,6 +12,8 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
 
@@ -211,6 +213,64 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
         }
 
         return false;
+    }
+    
+    @Override
+    public Set<String> getAllNis() {
+        return readAllValues("SELECT nis FROM mst_siswa", "nis");
+    }
+
+    @Override
+    public Set<String> getAllNisn() {
+        return readAllValues("SELECT nisn FROM mst_siswa WHERE nisn IS NOT NULL", "nisn");
+    }
+
+    private Set<String> readAllValues(String sql, String column) {
+        Set<String> values = new HashSet<>();
+
+        try (Connection connection = getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+
+            while (resultSet.next()) {
+                values.add(resultSet.getString(column));
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal membaca data siswa dari database: " + exception.getMessage(), exception);
+        }
+
+        return values;
+    }
+
+    // Simpan banyak siswa dalam satu transaksi: kalau satu gagal, semuanya dibatalkan.
+    @Override
+    public int saveBatch(List<Student> students) {
+        String sql = "INSERT INTO mst_siswa(nis, nisn, nama_siswa, id_kelas, jenis_kelamin, diubah_oleh) VALUES (?, ?, ?, ?, ?, ?)";
+
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                for (Student student : students) {
+                    preparedStatement.setString(1, student.getNis());
+                    preparedStatement.setString(2, student.getNisn());
+                    preparedStatement.setString(3, student.getName());
+                    preparedStatement.setInt(4, student.getClassroom().getId());
+                    preparedStatement.setString(5, student.getGender());
+                    preparedStatement.setString(6, student.getUpdatedBy());
+                    preparedStatement.addBatch();
+                }
+
+                preparedStatement.executeBatch();
+                connection.commit();
+                return students.size();
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Import siswa gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
+        }
     }
 
     @Override

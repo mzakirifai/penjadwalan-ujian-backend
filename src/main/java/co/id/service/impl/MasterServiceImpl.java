@@ -20,6 +20,8 @@ import co.id.model.Subject;
 import co.id.model.Teacher;
 import co.id.service.MasterService;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MasterServiceImpl implements MasterService{
     private final TeacherDAO teacherDAO;
@@ -192,6 +194,60 @@ public class MasterServiceImpl implements MasterService{
         validateStudent(student);
         student.setUpdatedBy(currentUsername);
         studentDAO.saveOrUpdate(student);
+    }
+    
+    @Override
+    public Set<String> getAllStudentNis() {
+        return studentDAO.getAllNis();
+    }
+
+    @Override
+    public Set<String> getAllStudentNisn() {
+        return studentDAO.getAllNisn();
+    }
+
+    @Override
+    public int importStudents(List<Student> students, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+
+        if (students == null || students.isEmpty()) {
+            return 0;
+        }
+
+        // Validasi ulang di service, jangan hanya mengandalkan pengecekan di layar
+        Set<String> existingNis = studentDAO.getAllNis();
+        Set<String> existingNisn = studentDAO.getAllNisn();
+        Set<String> seenNis = new HashSet<>();
+        Set<String> seenNisn = new HashSet<>();
+
+        for (Student student : students) {
+            String nis = student.getNis() == null ? "" : student.getNis().trim();
+            String nisn = student.getNisn() == null ? "" : student.getNisn().trim();
+            String name = student.getName() == null ? "" : student.getName().trim();
+
+            if (nis.isEmpty() || name.isEmpty()) {
+                throw new IllegalArgumentException("NIS dan Nama wajib diisi (NIS: " + nis + ").");
+            }
+            if (!nisn.matches("\\d{10}")) {
+                throw new IllegalArgumentException("NISN harus 10 digit angka (NIS: " + nis + ").");
+            }
+            if (student.getClassroom() == null) {
+                throw new IllegalArgumentException("Kelas wajib dipilih (NIS: " + nis + ").");
+            }
+            if (existingNis.contains(nis) || !seenNis.add(nis)) {
+                throw new IllegalArgumentException("NIS " + nis + " sudah terdaftar.");
+            }
+            if (existingNisn.contains(nisn) || !seenNisn.add(nisn)) {
+                throw new IllegalArgumentException("NISN " + nisn + " sudah terdaftar.");
+            }
+
+            student.setNis(nis);
+            student.setNisn(nisn);
+            student.setName(name);
+            student.setUpdatedBy(currentUsername);
+        }
+
+        return studentDAO.saveBatch(students);
     }
 
     private void validateStudent(Student student) {

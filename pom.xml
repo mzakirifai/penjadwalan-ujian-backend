@@ -21,6 +21,12 @@
             <scope>compile</scope>
         </dependency>
         
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+        
         <!-- Source: https://mvnrepository.com/artifact/org.mindrot/jbcrypt -->
         <dependency>
             <groupId>org.mindrot</groupId>

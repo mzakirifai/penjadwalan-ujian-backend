@@ -1,4 +1,4 @@
-    package co.id.service;
+package co.id.service;
 
 import co.id.model.Classroom;
 import co.id.model.Major;
@@ -7,6 +7,7 @@ import co.id.model.Student;
 import co.id.model.Subject;
 import co.id.model.Teacher;
 import java.util.List;
+import java.util.Set;
 
 public interface MasterService {
     // Teacher
@@ -43,6 +44,9 @@ public interface MasterService {
     public int countStudents();
     public Student getByIdStudent(int id);
     public List<Student> getStudentsByClassroom(int classroomId);
+    public Set<String> getAllStudentNis();
+    public Set<String> getAllStudentNisn();
+    public int importStudents(List<Student> students, String currentUsername, String currentUserRole);
     public void saveOrUpdateStudent(Student student, String currentUsername, String currentUserRole);
     public void deleteStudent(int id, String currentUserRole);
     
