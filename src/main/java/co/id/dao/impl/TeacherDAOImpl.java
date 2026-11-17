@@ -154,6 +154,38 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
             throw new IllegalStateException("Gagal menyimpan data ke database: " + exception.getMessage(), exception);
         }
     }
+    
+    // Simpan banyak guru dalam satu transaksi: kalau satu gagal, semuanya dibatalkan.
+    @Override
+    public int saveBatch(List<Teacher> teachers) {
+        String sql = "INSERT INTO mst_guru(nip, nama_guru, jenis_kelamin, nomor_hp, email, alamat, diubah_oleh) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                for (Teacher teacher : teachers) {
+                    preparedStatement.setString(1, teacher.getNip());
+                    preparedStatement.setString(2, teacher.getName());
+                    preparedStatement.setString(3, teacher.getGender());
+                    preparedStatement.setString(4, teacher.getPhoneNumber());
+                    preparedStatement.setString(5, teacher.getEmail());
+                    preparedStatement.setString(6, teacher.getAddress());
+                    preparedStatement.setString(7, teacher.getUpdatedBy());
+                    preparedStatement.addBatch();
+                }
+
+                preparedStatement.executeBatch();
+                connection.commit();
+                return teachers.size();
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Import guru gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
+        }
+    }
 
     @Override
     public void delete(int id) {

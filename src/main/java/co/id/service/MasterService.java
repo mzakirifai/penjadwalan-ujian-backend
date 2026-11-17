@@ -18,6 +18,7 @@ public interface MasterService {
     public Teacher getByIdTeacher(int id);
     public void saveOrUpdateTeacher(Teacher teacher, String currentUsername, String currentUserRole);
     public void deleteTeacher(int id, String currentUserRole);
+    public int importTeachers(List<Teacher> teachers, String currentUsername, String currentUserRole);
     
     // Major
     public List<Major> getAllMajors();

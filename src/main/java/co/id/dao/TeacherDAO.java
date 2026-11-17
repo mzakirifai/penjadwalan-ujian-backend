@@ -11,4 +11,5 @@ public interface TeacherDAO {
     public Teacher getById(int id);
     public void saveOrUpdate(Teacher teacher);
     public void delete(int id);
+    public int saveBatch(List<Teacher> teachers);
 }

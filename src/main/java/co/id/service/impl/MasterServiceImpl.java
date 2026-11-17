@@ -72,6 +72,37 @@ public class MasterServiceImpl implements MasterService{
         teacher.setUpdatedBy(currentUsername);
         teacherDAO.saveOrUpdate(teacher);
     }
+    
+    @Override
+    public int importTeachers(List<Teacher> teachers, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+
+        if (teachers == null || teachers.isEmpty()) {
+            return 0;
+        }
+
+        // Validasi ulang di service, jangan hanya mengandalkan pengecekan di layar
+        Set<String> seenNip = new HashSet<>();
+        for (Teacher existing : teacherDAO.getAllTeachers()) {
+            if (existing.getNip() != null) {
+                seenNip.add(existing.getNip().trim());
+            }
+        }
+
+        for (Teacher teacher : teachers) {
+            if (teacher.getNip() == null || teacher.getNip().isBlank()
+                    || teacher.getName() == null || teacher.getName().isBlank()
+                    || teacher.getGender() == null) {
+                throw new IllegalArgumentException("NIP, Nama, dan Jenis Kelamin wajib diisi (NIP: " + teacher.getNip() + ").");
+            }
+            if (!seenNip.add(teacher.getNip().trim())) {
+                throw new IllegalArgumentException("NIP " + teacher.getNip() + " sudah terdaftar.");
+            }
+            teacher.setUpdatedBy(currentUsername);
+        }
+
+        return teacherDAO.saveBatch(teachers);
+    }
 
     @Override
     public void deleteTeacher(int id, String currentUserRole) {
