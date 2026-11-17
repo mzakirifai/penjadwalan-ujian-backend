@@ -11,6 +11,14 @@ public interface TeachingAssignmentService {
     public int countTeachingAssignments();
     public TeachingAssignment getById(int id);
     public void save(TeachingAssignment teachingAssignment, String currentUsername, String currentUserRole);
+
+    /**
+     * Menambah banyak pengampu sekaligus (satu guru untuk banyak kelas dan mapel).
+     * Kombinasi guru+mapel+kelas yang sudah ada otomatis dilewati.
+     *
+     * @return jumlah data yang benar-benar ditambahkan
+     */
+    public int saveAll(List<TeachingAssignment> teachingAssignments, String currentUsername, String currentUserRole);
     public void delete(int id, String currentUserRole);
     public boolean isAssigned(int teacherId, int subjectId, int classroomId);
 }

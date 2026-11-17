@@ -11,6 +11,7 @@ public class TeachingAssignment {
     private Teacher teacher;
     private Subject subject;
     private Classroom classroom;
+    private Integer teacherCode; // kode guru di dalam mapel, mis. 1 untuk DDPK TKJ (1); boleh kosong
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String updatedBy;
@@ -29,6 +30,15 @@ public class TeachingAssignment {
 
     public Classroom getClassroom() { return classroom; }
     public void setClassroom(Classroom classroom) { this.classroom = classroom; }
+
+    public Integer getTeacherCode() { return teacherCode; }
+    public void setTeacherCode(Integer teacherCode) { this.teacherCode = teacherCode; }
+
+    /** Nama mapel dengan kode guru, sesuai penulisan di jadwal pelajaran, mis. "DDPK TKJ (1)". */
+    public String getSubjectLabel() {
+        String name = subject != null ? subject.getName() : "";
+        return teacherCode == null ? name : name + " (" + teacherCode + ")";
+    }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

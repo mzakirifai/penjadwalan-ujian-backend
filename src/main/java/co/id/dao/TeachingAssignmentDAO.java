@@ -11,7 +11,10 @@ public interface TeachingAssignmentDAO {
     public int countTeachingAssignments();
     public TeachingAssignment getById(int id);
     public void saveOrUpdate(TeachingAssignment teachingAssignment);
+    public int saveAll(List<TeachingAssignment> teachingAssignments);
     public void delete(int id);
     public boolean isAssigned(int teacherId, int subjectId, int classroomId);
+    /** True jika kode guru di mapel tersebut sudah dipakai guru lain. */
+    public boolean isCodeTakenByOtherTeacher(int subjectId, int teacherCode, int teacherId);
     public boolean isDuplicate(int teacherId, int subjectId, int classroomId, int excludeId);
 }

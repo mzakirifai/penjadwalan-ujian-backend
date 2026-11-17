@@ -59,8 +59,8 @@ public class TeachingAssignmentDAOImpl extends DatabaseConfiguration implements 
 
     @Override
     public void saveOrUpdate(TeachingAssignment ta) {
-        String sqlInsert = "INSERT INTO mst_pengampu(id_guru, id_mapel, id_kelas, diubah_oleh) VALUES (?, ?, ?, ?)";
-        String sqlUpdate = "UPDATE mst_pengampu SET id_guru = ?, id_mapel = ?, id_kelas = ?, diubah_oleh = ? WHERE id_pengampu = ?";
+        String sqlInsert = "INSERT INTO mst_pengampu(id_guru, id_mapel, id_kelas, kode_guru, diubah_oleh) VALUES (?, ?, ?, ?, ?)";
+        String sqlUpdate = "UPDATE mst_pengampu SET id_guru = ?, id_mapel = ?, id_kelas = ?, kode_guru = ?, diubah_oleh = ? WHERE id_pengampu = ?";
 
         try (Connection connection = getConnection();
              PreparedStatement ps = connection.prepareStatement(ta.getId() == 0 ? sqlInsert : sqlUpdate)) {
@@ -68,11 +68,52 @@ public class TeachingAssignmentDAOImpl extends DatabaseConfiguration implements 
             ps.setInt(1, ta.getTeacher().getId());
             ps.setInt(2, ta.getSubject().getId());
             ps.setInt(3, ta.getClassroom().getId());
-            ps.setString(4, ta.getUpdatedBy());
+            setCode(ps, 4, ta.getTeacherCode());
+            ps.setString(5, ta.getUpdatedBy());
             if (ta.getId() != 0) {
-                ps.setInt(5, ta.getId());
+                ps.setInt(6, ta.getId());
             }
             ps.executeUpdate();
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal menyimpan data ke database: " + exception.getMessage(), exception);
+        }
+    }
+
+    /**
+     * Menyimpan banyak data pengampu baru sekaligus dalam satu transaksi:
+     * jika satu baris gagal, seluruh penyimpanan dibatalkan.
+     *
+     * @return jumlah baris yang berhasil disimpan
+     */
+    @Override
+    public int saveAll(List<TeachingAssignment> teachingAssignments) {
+        if (teachingAssignments == null || teachingAssignments.isEmpty()) {
+            return 0;
+        }
+
+        String sqlInsert = "INSERT INTO mst_pengampu(id_guru, id_mapel, id_kelas, kode_guru, diubah_oleh) VALUES (?, ?, ?, ?, ?)";
+
+        try (Connection connection = getConnection()) {
+            boolean previousAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            try (PreparedStatement ps = connection.prepareStatement(sqlInsert)) {
+                for (TeachingAssignment ta : teachingAssignments) {
+                    ps.setInt(1, ta.getTeacher().getId());
+                    ps.setInt(2, ta.getSubject().getId());
+                    ps.setInt(3, ta.getClassroom().getId());
+                    setCode(ps, 4, ta.getTeacherCode());
+                    ps.setString(5, ta.getUpdatedBy());
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+                connection.commit();
+                return teachingAssignments.size();
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(previousAutoCommit);
+            }
         } catch (Exception exception) {
             throw new IllegalStateException("Gagal menyimpan data ke database: " + exception.getMessage(), exception);
         }
@@ -96,12 +137,26 @@ public class TeachingAssignmentDAOImpl extends DatabaseConfiguration implements 
     }
 
     @Override
+    public boolean isCodeTakenByOtherTeacher(int subjectId, int teacherCode, int teacherId) {
+        return count("SELECT COUNT(*) FROM mst_pengampu WHERE id_mapel = ? AND kode_guru = ? AND id_guru <> ?",
+                subjectId, teacherCode, teacherId) > 0;
+    }
+
+    @Override
     public boolean isDuplicate(int teacherId, int subjectId, int classroomId, int excludeId) {
         return count("SELECT COUNT(*) FROM mst_pengampu WHERE id_guru = ? AND id_mapel = ? AND id_kelas = ? AND id_pengampu <> ?",
                 teacherId, subjectId, classroomId, excludeId) > 0;
     }
 
     // ---------- helper ----------
+
+    private void setCode(PreparedStatement ps, int index, Integer code) throws Exception {
+        if (code == null) {
+            ps.setNull(index, java.sql.Types.INTEGER);
+        } else {
+            ps.setInt(index, code);
+        }
+    }
 
     private List<TeachingAssignment> query(String sql, Object... params) {
         List<TeachingAssignment> list = new ArrayList<>();
@@ -165,6 +220,9 @@ public class TeachingAssignmentDAOImpl extends DatabaseConfiguration implements 
         classroom.setCode(rs.getString("kode_kelas"));
         classroom.setName(rs.getString("nama_kelas"));
         ta.setClassroom(classroom);
+
+        int code = rs.getInt("kode_guru");
+        ta.setTeacherCode(rs.wasNull() ? null : code);
 
         Timestamp createdAt = rs.getTimestamp("tanggal_buat");
         if (createdAt != null) {
