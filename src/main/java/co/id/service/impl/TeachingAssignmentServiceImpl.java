@@ -39,6 +39,11 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
     }
 
     @Override
+    public boolean isAssignedForExam(int teacherId, int subjectId, int classroomId, Integer examTeacherCode) {
+        return teachingAssignmentDAO.isAssignedForExam(teacherId, subjectId, classroomId, examTeacherCode);
+    }
+
+    @Override
     public int countTeachingAssignments() {
         return teachingAssignmentDAO.countTeachingAssignments();
     }

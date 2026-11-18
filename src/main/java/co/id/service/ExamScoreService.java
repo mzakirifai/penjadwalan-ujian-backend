@@ -14,6 +14,12 @@ public interface ExamScoreService {
     public ExamScore getById(int id);
     public void save(ExamScore examScore, String currentUsername, String currentUserRole, 
             Integer currentTeacherId);
+    /**
+     * Impor nilai satu ujian (dari Excel/CSV) dalam satu transaksi; nilai lama ditimpa.
+     * @return jumlah nilai yang tersimpan
+     */
+    public int importScores(List<ExamScore> scores, String currentUsername, String currentUserRole,
+            Integer currentTeacherId);
     public void delete(int id, String currentUserRole);
     public co.id.model.report.PassFailSummary getPassFailSummary(String semester, 
             String academicYear);

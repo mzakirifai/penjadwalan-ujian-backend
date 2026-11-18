@@ -12,8 +12,14 @@ public class ImportItem<T> {
     private final List<String> cells;   // nilai yang ditampilkan di tabel pratinjau
     private final T payload;            // objek yang akan disimpan (Teacher, Subject, ...)
     private final String error;
+    private final String warning;       // catatan untuk baris yang tetap diimport (boleh null)
 
     public ImportItem(String sheet, int rowNumber, List<String> cells, T payload, String error) {
+        this(sheet, rowNumber, cells, payload, error, null);
+    }
+
+    public ImportItem(String sheet, int rowNumber, List<String> cells, T payload, String error, String warning) {
+        this.warning = warning;
         this.sheet = sheet;
         this.rowNumber = rowNumber;
         this.cells = cells;
@@ -26,5 +32,6 @@ public class ImportItem<T> {
     public List<String> getCells() { return cells; }
     public T getPayload() { return payload; }
     public String getError() { return error; }
+    public String getWarning() { return warning; }
     public boolean isValid() { return error == null; }
 }

@@ -13,6 +13,8 @@ public interface ExamScoreDAO {
     public int countByExamSchedule(int examScheduleId);
     public ExamScore getById(int id);
     public void saveOrUpdate(ExamScore examScore);
+    /** Simpan banyak nilai sekaligus dalam satu transaksi; nilai yang sudah ada ditimpa. */
+    public void saveBatch(List<ExamScore> scores);
     public void delete(int id);
     public boolean hasScore(int examScheduleId, int studentId, int excludeId);
     public co.id.model.report.PassFailSummary getPassFailSummary(String semester, String academicYear);

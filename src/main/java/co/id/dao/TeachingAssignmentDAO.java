@@ -17,6 +17,8 @@ public interface TeachingAssignmentDAO {
     public void delete(int id);
     public boolean isAssigned(int teacherId, int subjectId, int classroomId);
     /** True jika kode guru di mapel tersebut sudah dipakai guru lain. */
+    /** Guru boleh mengelola ujian ini? Ujian tanpa kode: pengampu mana pun; ujian berkode: kode harus sama. */
+    public boolean isAssignedForExam(int teacherId, int subjectId, int classroomId, Integer examTeacherCode);
     public boolean isCodeTakenByOtherTeacher(int subjectId, int teacherCode, int teacherId);
     public boolean isDuplicate(int teacherId, int subjectId, int classroomId, int excludeId);
 }

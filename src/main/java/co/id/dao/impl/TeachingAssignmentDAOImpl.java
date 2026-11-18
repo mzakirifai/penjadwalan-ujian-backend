@@ -143,6 +143,15 @@ public class TeachingAssignmentDAOImpl extends DatabaseConfiguration implements 
     }
 
     @Override
+    public boolean isAssignedForExam(int teacherId, int subjectId, int classroomId, Integer examTeacherCode) {
+        if (examTeacherCode == null) {
+            return isAssigned(teacherId, subjectId, classroomId);
+        }
+        return count("SELECT COUNT(*) FROM mst_pengampu WHERE id_guru = ? AND id_mapel = ? AND id_kelas = ? AND kode_guru = ?",
+                teacherId, subjectId, classroomId, examTeacherCode) > 0;
+    }
+
+    @Override
     public boolean isCodeTakenByOtherTeacher(int subjectId, int teacherCode, int teacherId) {
         return count("SELECT COUNT(*) FROM mst_pengampu WHERE id_mapel = ? AND kode_guru = ? AND id_guru <> ?",
                 subjectId, teacherCode, teacherId) > 0;

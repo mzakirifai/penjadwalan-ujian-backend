@@ -257,6 +257,46 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
     }
 
     @Override
+    public void saveBatch(List<ExamScore> scores) {
+        String sql = "INSERT INTO trx_nilai(id_ujian, id_siswa, nilai, diubah_oleh) VALUES (?, ?, ?, ?) "
+                + "ON DUPLICATE KEY UPDATE nilai = VALUES(nilai), diubah_oleh = VALUES(diubah_oleh)";
+
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+
+            try {
+                try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                    for (ExamScore es : scores) {
+                        ps.setInt(1, es.getExamSchedule().getId());
+                        ps.setInt(2, es.getStudent().getId());
+                        ps.setInt(3, es.getScore());
+                        ps.setString(4, es.getUpdatedBy());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+
+                // baris baru belum punya kode_nilai: isi dengan pola yang sama seperti simpan satuan (NLI0001, ...)
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "UPDATE trx_nilai SET kode_nilai = CONCAT('NLI', LPAD(id_nilai, 4, '0')) "
+                        + "WHERE id_ujian = ? AND kode_nilai IS NULL")) {
+                    ps.setInt(1, scores.get(0).getExamSchedule().getId());
+                    ps.executeUpdate();
+                }
+
+                connection.commit();
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal menyimpan nilai ke database: " + exception.getMessage(), exception);
+        }
+    }
+
+    @Override
     public void delete(int id) {
         String sql = "DELETE FROM trx_nilai WHERE id_nilai = ?";
 

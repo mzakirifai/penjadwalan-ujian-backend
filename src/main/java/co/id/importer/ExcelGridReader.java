@@ -24,6 +24,12 @@ public class ExcelGridReader {
     public static Map<String, List<List<String>>> readAll(File file) throws IOException {
         Map<String, List<List<String>>> result = new LinkedHashMap<>();
 
+        String fileName = file.getName().toLowerCase();
+        if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
+            result.put("CSV", CsvGridReader.read(file));
+            return result;
+        }
+
         try (FileInputStream inputStream = new FileInputStream(file);
              Workbook workbook = WorkbookFactory.create(inputStream)) {
 

@@ -89,6 +89,42 @@ public class ExamScoreServiceImpl implements ExamScoreService {
     }
 
     @Override
+    public int importScores(List<ExamScore> scores, String currentUsername, String currentUserRole,
+            Integer currentTeacherId) {
+        if (scores == null || scores.isEmpty()) {
+            return 0;
+        }
+
+        int examScheduleId = scores.get(0).getExamSchedule().getId();
+        ensureCanInputScore(currentUserRole, currentTeacherId, scores.get(0));
+
+        java.util.Set<Integer> registered = new java.util.HashSet<>();
+        for (co.id.model.ExamParticipant participant : examParticipantDAO.getByExamSchedule(examScheduleId)) {
+            registered.add(participant.getStudent().getId());
+        }
+
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        for (ExamScore score : scores) {
+            validate(score);
+            if (score.getExamSchedule().getId() != examScheduleId) {
+                throw new IllegalArgumentException("Semua nilai harus untuk satu jadwal ujian yang sama.");
+            }
+            int studentId = score.getStudent().getId();
+            if (!registered.contains(studentId)) {
+                throw new IllegalStateException("Siswa " + score.getStudent().getName()
+                        + " belum terdaftar sebagai peserta pada jadwal ujian ini.");
+            }
+            if (!seen.add(studentId)) {
+                throw new IllegalArgumentException("Siswa " + score.getStudent().getName() + " muncul dua kali.");
+            }
+            score.setUpdatedBy(currentUsername);
+        }
+
+        examScoreDAO.saveBatch(scores);
+        return scores.size();
+    }
+
+    @Override
     public void delete(int id, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
 
@@ -140,12 +176,14 @@ public class ExamScoreServiceImpl implements ExamScoreService {
                 throw new IllegalArgumentException("Data jadwal ujian tidak lengkap (mapel/kelas tidak diketahui).");
             }
 
-            // Guru hanya boleh menginput nilai untuk mapel & kelas yang diampunya
-            boolean isTeachingAssignment = currentTeacherId != null && teachingAssignmentDAO.isAssigned(
-                    currentTeacherId, schedule.getSubject().getId(), schedule.getClassroom().getId());
+            // Guru hanya boleh menginput nilai untuk mapel & kelas yang diampunya; jika ujiannya berkode
+            // (mis. DDPK TKJ (2)), kode guru di data pengampu juga harus sama.
+            boolean isTeachingAssignment = currentTeacherId != null && teachingAssignmentDAO.isAssignedForExam(
+                    currentTeacherId, schedule.getSubject().getId(), schedule.getClassroom().getId(),
+                    schedule.getTeacherCode());
 
             if (!isTeachingAssignment) {
-                throw new SecurityException("Anda hanya bisa menginput nilai untuk mata pelajaran dan kelas yang Anda ajar.");
+                throw new SecurityException("Anda hanya bisa menginput nilai untuk mata pelajaran, kelas, dan kode guru yang Anda ajar.");
             }
             return;
         }

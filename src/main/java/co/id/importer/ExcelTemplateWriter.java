@@ -20,6 +20,12 @@ public class ExcelTemplateWriter {
 
     public static void write(File file, String dataSheetName, List<String> headers, List<String> notes)
             throws IOException {
+        write(file, dataSheetName, headers, notes, List.of());
+    }
+
+    /** Sama seperti di atas, dengan baris data yang sudah terisi (mis. daftar peserta ujian). */
+    public static void write(File file, String dataSheetName, List<String> headers, List<String> notes,
+                             List<List<String>> rows) throws IOException {
         try (Workbook workbook = new XSSFWorkbook()) {
 
             // gaya: kolom teks + judul tebal
@@ -40,6 +46,15 @@ public class ExcelTemplateWriter {
                 org.apache.poi.ss.usermodel.Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers.get(i));
                 cell.setCellStyle(headerStyle);
+            }
+
+            for (int r = 0; r < rows.size(); r++) {
+                Row dataRow = data.createRow(r + 1);
+                for (int c = 0; c < rows.get(r).size(); c++) {
+                    org.apache.poi.ss.usermodel.Cell cell = dataRow.createCell(c);
+                    cell.setCellValue(rows.get(r).get(c));
+                    cell.setCellStyle(textStyle);
+                }
             }
 
             Sheet guide = workbook.createSheet("Petunjuk");
