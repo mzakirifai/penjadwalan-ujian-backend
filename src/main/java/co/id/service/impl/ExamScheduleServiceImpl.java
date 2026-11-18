@@ -98,9 +98,9 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     }
     
     @Override
-    public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, String examType,
+    public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, Integer teacherCode, String examType,
             String semester, String academicYear, int excludeId) {
-        return examScheduleDAO.hasSameSubjectForClassroom(classroomId, subjectId, examType, semester, academicYear, excludeId);
+        return examScheduleDAO.hasSameSubjectForClassroom(classroomId, subjectId, teacherCode, examType, semester, academicYear, excludeId);
     }
 
     private void ensureIsAdmin(String currentUserRole) {

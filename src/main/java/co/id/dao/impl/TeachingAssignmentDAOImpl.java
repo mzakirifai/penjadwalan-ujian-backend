@@ -47,6 +47,12 @@ public class TeachingAssignmentDAOImpl extends DatabaseConfiguration implements 
     }
 
     @Override
+    public List<TeachingAssignment> getCodedByClassroomAndSubject(int classroomId, int subjectId) {
+        return query(SELECT_JOIN + "WHERE p.id_kelas = ? AND p.id_mapel = ? AND p.kode_guru IS NOT NULL "
+                + "ORDER BY p.kode_guru, g.nama_guru", classroomId, subjectId);
+    }
+
+    @Override
     public int countTeachingAssignments() {
         return count("SELECT COUNT(*) FROM mst_pengampu");
     }

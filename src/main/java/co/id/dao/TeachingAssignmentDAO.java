@@ -8,6 +8,8 @@ public interface TeachingAssignmentDAO {
     public List<TeachingAssignment> getTeachingAssignmentBy(String keyword);
     public List<TeachingAssignment> getTeachingAssignments(int page, int size);
     public List<TeachingAssignment> getByTeacher(int teacherId);
+    /** Pengampu (berkode) untuk satu mapel di satu kelas, urut kode guru. */
+    public List<TeachingAssignment> getCodedByClassroomAndSubject(int classroomId, int subjectId);
     public int countTeachingAssignments();
     public TeachingAssignment getById(int id);
     public void saveOrUpdate(TeachingAssignment teachingAssignment);

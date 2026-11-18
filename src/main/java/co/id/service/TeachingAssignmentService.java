@@ -8,6 +8,7 @@ public interface TeachingAssignmentService {
     public List<TeachingAssignment> getTeachingAssignmentBy(String keyword);
     public List<TeachingAssignment> getTeachingAssignments(int page, int size);
     public List<TeachingAssignment> getByTeacher(int teacherId);
+    public List<TeachingAssignment> getCodedByClassroomAndSubject(int classroomId, int subjectId);
     public int countTeachingAssignments();
     public TeachingAssignment getById(int id);
     public void save(TeachingAssignment teachingAssignment, String currentUsername, String currentUserRole);

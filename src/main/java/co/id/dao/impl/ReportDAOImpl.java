@@ -187,7 +187,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
             item.setDate(schedule.getDate() != null ? schedule.getDate().format(dateFormatter) : "-");
             item.setStartTime(schedule.getStartTime() != null ? schedule.getStartTime().format(timeFormatter) : "-");
             item.setEndTime(schedule.getEndTime() != null ? schedule.getEndTime().format(timeFormatter) : "-");
-            item.setSubjectName(schedule.getSubject() != null ? schedule.getSubject().getName() : "-");
+            item.setSubjectName(schedule.getSubject() != null ? schedule.getSubjectLabel() : "-");
             item.setClassroomName(schedule.getClassroom() != null ? schedule.getClassroom().getName() : "-");
             item.setRoomName(schedule.getRoom() != null ? schedule.getRoom().getName() : "-");
             item.setTeacherName(schedule.getTeacher() != null ? schedule.getTeacher().getName() : "-");
@@ -216,7 +216,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
             item.setDate(schedule.getDate() != null ? schedule.getDate().format(dateFormatter) : "-");
             item.setStartTime(schedule.getStartTime() != null ? schedule.getStartTime().format(timeFormatter) : "-");
             item.setEndTime(schedule.getEndTime() != null ? schedule.getEndTime().format(timeFormatter) : "-");
-            item.setSubjectName(schedule.getSubject() != null ? schedule.getSubject().getName() : "-");
+            item.setSubjectName(schedule.getSubject() != null ? schedule.getSubjectLabel() : "-");
             item.setClassroomName(schedule.getClassroom() != null ? schedule.getClassroom().getName() : "-");
             item.setRoomName(schedule.getRoom() != null ? schedule.getRoom().getName() : "-");
             item.setTeacherName(schedule.getTeacher() != null ? schedule.getTeacher().getName() : "-");
@@ -233,7 +233,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
  
         String sql = "SELECT ep.no_peserta, ep.no_kursi, "
                 + "ej.tanggal, ej.jam_mulai, ej.jam_selesai, "
-                + "m.nama_mapel, r.nama_ruangan "
+                + "CONCAT(m.nama_mapel, IF(ej.kode_guru IS NULL, '', CONCAT(' (', ej.kode_guru, ')'))) AS nama_mapel, r.nama_ruangan "
                 + "FROM trx_peserta ep "
                 + "JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
                 + "LEFT JOIN mst_mapel m ON ej.id_mapel = m.id_mapel "
@@ -289,13 +289,13 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     public List<ClassScoreRecapItem> getClassScoreRecapReport(int classroomId, String examType, String semester, String academicYear) {
         List<ClassScoreRecapItem> items = new ArrayList<>();
  
-        String sql = "SELECT s.nis, s.nama_siswa, m.nama_mapel, es.nilai "
+        String sql = "SELECT s.nis, s.nama_siswa, CONCAT(m.nama_mapel, IF(ej.kode_guru IS NULL, '', CONCAT(' (', ej.kode_guru, ')'))) AS nama_mapel, es.nilai "
                 + "FROM trx_nilai es "
                 + "JOIN trx_jadwal ej ON es.id_ujian = ej.id_ujian "
                 + "JOIN mst_siswa s ON es.id_siswa = s.id_siswa "
                 + "JOIN mst_mapel m ON ej.id_mapel = m.id_mapel "
                 + "WHERE ej.id_kelas = ? AND ej.jenis_ujian = ? AND ej.semester = ? AND ej.tahun_akademik = ? "
-                + "ORDER BY s.nama_siswa, m.nama_mapel";
+                + "ORDER BY s.nama_siswa, m.nama_mapel, ej.kode_guru";
  
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {

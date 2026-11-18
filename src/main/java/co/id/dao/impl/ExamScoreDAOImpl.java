@@ -18,7 +18,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
 
     private static final String SELECT_JOIN =
         "SELECT es.*, "
-        + "ej.kode_ujian, ej.jenis_ujian, ej.tanggal, ej.jam_mulai, ej.jam_selesai, "
+        + "ej.kode_ujian, ej.kode_guru, ej.jenis_ujian, ej.tanggal, ej.jam_mulai, ej.jam_selesai, "
         + "g.id_guru, g.nip, g.nama_guru, "
         + "s.nis, s.nama_siswa "
         + "FROM trx_nilai es "
@@ -324,6 +324,8 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
             ExamSchedule examSchedule = new ExamSchedule();
             examSchedule.setId(examScheduleId);
             examSchedule.setCode(resultSet.getString("kode_ujian"));
+            int teacherCode = resultSet.getInt("kode_guru");
+            examSchedule.setTeacherCode(resultSet.wasNull() ? null : teacherCode);
             examSchedule.setExamType(resultSet.getString("jenis_ujian"));
 
             if (resultSet.getDate("tanggal") != null) {

@@ -23,6 +23,7 @@ public class ExamSchedule {
     private Classroom classroom;
     private Room room;
     private Teacher teacher;
+    private Integer teacherCode; // kode guru pembuat soal, mis. 1 untuk DDPK TKJ (1); boleh kosong
 
     public ExamSchedule() {
     }
@@ -44,6 +45,20 @@ public class ExamSchedule {
         this.classroom = classroom;
         this.room = room;
         this.teacher = teacher;
+    }
+
+    public Integer getTeacherCode() {
+        return teacherCode;
+    }
+
+    public void setTeacherCode(Integer teacherCode) {
+        this.teacherCode = teacherCode;
+    }
+
+    /** Nama mapel dengan kode guru, sesuai penulisan di jadwal ujian sekolah, mis. "DDPK TKJ (1)". */
+    public String getSubjectLabel() {
+        String name = subject != null ? subject.getName() : "";
+        return teacherCode == null ? name : name + " (" + teacherCode + ")";
     }
 
     public int getId() {

@@ -34,6 +34,11 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
     }
 
     @Override
+    public List<TeachingAssignment> getCodedByClassroomAndSubject(int classroomId, int subjectId) {
+        return teachingAssignmentDAO.getCodedByClassroomAndSubject(classroomId, subjectId);
+    }
+
+    @Override
     public int countTeachingAssignments() {
         return teachingAssignmentDAO.countTeachingAssignments();
     }

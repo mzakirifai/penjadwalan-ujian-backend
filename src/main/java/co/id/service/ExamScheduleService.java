@@ -18,6 +18,6 @@ public interface ExamScheduleService {
             java.time.LocalDate end);
     public void save(ExamSchedule examSchedule, String currentUsername, String currentUserRole);
     public void delete(int id, String currentUserRole);
-    public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, String examType,
+    public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, Integer teacherCode, String examType,
         String semester, String academicYear, int excludeId);
 }

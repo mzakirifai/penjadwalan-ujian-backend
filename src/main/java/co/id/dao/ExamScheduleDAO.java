@@ -22,6 +22,6 @@ public interface ExamScheduleDAO {
     public void delete(int id);
     public boolean hasConflict(LocalDate date, LocalTime startTime, LocalTime endTime,
             int roomId, int classroomId, int teacherId, int excludeId);
-    public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, String examType,
+    public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, Integer teacherCode, String examType,
         String semester, String academicYear, int excludeId);
 }

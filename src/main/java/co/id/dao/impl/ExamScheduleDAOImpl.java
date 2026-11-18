@@ -262,10 +262,10 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
     @Override
     public void saveOrUpdate(ExamSchedule examSchedule) {
-        String sqlInsert = "INSERT INTO trx_jadwal(jenis_ujian, semester, tahun_akademik, tanggal, jam_mulai, jam_selesai, id_mapel, id_kelas, id_ruangan, id_guru, keterangan, diubah_oleh) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sqlInsert = "INSERT INTO trx_jadwal(jenis_ujian, semester, tahun_akademik, tanggal, jam_mulai, jam_selesai, id_mapel, id_kelas, id_ruangan, id_guru, keterangan, diubah_oleh, kode_guru) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         String sqlUpdate = "UPDATE trx_jadwal SET jenis_ujian = ?, semester = ?, tahun_akademik = ?, tanggal = ?, jam_mulai = ?, jam_selesai = ?, "
-                + "id_mapel = ?, id_kelas = ?, id_ruangan = ?, id_guru = ?, keterangan = ?, diubah_oleh = ? WHERE id_ujian = ?";
+                + "id_mapel = ?, id_kelas = ?, id_ruangan = ?, id_guru = ?, keterangan = ?, diubah_oleh = ?, kode_guru = ? WHERE id_ujian = ?";
 
         try (Connection connection = getConnection()) {
             connection.setAutoCommit(false);
@@ -296,7 +296,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 } else {
                     try (PreparedStatement preparedStatement = connection.prepareStatement(sqlUpdate)) {
                         bindCommonFields(preparedStatement, examSchedule);
-                        preparedStatement.setInt(13, examSchedule.getId());
+                        preparedStatement.setInt(14, examSchedule.getId());
                         preparedStatement.executeUpdate();
                     }
                 }
@@ -313,7 +313,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
         }
     }
     
-    // Bind field yang sama untuk INSERT & UPDATE (urutan parameter 1-12 identik di kedua query)
+    // Bind field yang sama untuk INSERT & UPDATE (urutan parameter 1-13 identik di kedua query)
     private void bindCommonFields(PreparedStatement preparedStatement, ExamSchedule examSchedule) throws Exception {
         preparedStatement.setString(1, examSchedule.getExamType());
         preparedStatement.setString(2, examSchedule.getSemester());
@@ -348,6 +348,12 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
         preparedStatement.setString(11, examSchedule.getNotes());
         preparedStatement.setString(12, examSchedule.getUpdatedBy());
+
+        if (examSchedule.getTeacherCode() != null) {
+            preparedStatement.setInt(13, examSchedule.getTeacherCode());
+        } else {
+            preparedStatement.setNull(13, Types.INTEGER);
+        }
     }
 
     @Override
@@ -398,10 +404,10 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
     }
     
     @Override
-    public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, String examType,
+    public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, Integer teacherCode, String examType,
             String semester, String academicYear, int excludeId) {
         String sql = "SELECT COUNT(*) AS total FROM trx_jadwal "
-                + "WHERE id_kelas = ? AND id_mapel = ? AND jenis_ujian = ? "
+                + "WHERE id_kelas = ? AND id_mapel = ? AND kode_guru <=> ? AND jenis_ujian = ? "
                 + "AND semester = ? AND tahun_akademik = ? AND id_ujian <> ?";
 
         try (Connection connection = getConnection();
@@ -409,10 +415,15 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
             preparedStatement.setInt(1, classroomId);
             preparedStatement.setInt(2, subjectId);
-            preparedStatement.setString(3, examType);
-            preparedStatement.setString(4, semester);
-            preparedStatement.setString(5, academicYear);
-            preparedStatement.setInt(6, excludeId);
+            if (teacherCode != null) {
+                preparedStatement.setInt(3, teacherCode);
+            } else {
+                preparedStatement.setNull(3, Types.INTEGER);
+            }
+            preparedStatement.setString(4, examType);
+            preparedStatement.setString(5, semester);
+            preparedStatement.setString(6, academicYear);
+            preparedStatement.setInt(7, excludeId);
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
@@ -431,6 +442,10 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
         ExamSchedule examSchedule = new ExamSchedule();
         examSchedule.setId(resultSet.getInt("id_ujian"));
         examSchedule.setCode(resultSet.getString("kode_ujian"));
+
+        int teacherCode = resultSet.getInt("kode_guru");
+        examSchedule.setTeacherCode(resultSet.wasNull() ? null : teacherCode);
+
         examSchedule.setExamType(resultSet.getString("jenis_ujian"));
         examSchedule.setSemester(resultSet.getString("semester"));
         examSchedule.setAcademicYear(resultSet.getString("tahun_akademik"));

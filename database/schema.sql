@@ -35,7 +35,7 @@ CREATE TABLE `mst_guru` (
   `diubah_oleh` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id_guru`),
   UNIQUE KEY `nip` (`nip`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -78,7 +78,7 @@ CREATE TABLE `mst_kelas` (
   UNIQUE KEY `kode_kelas` (`kode_kelas`),
   KEY `id_jurusan` (`id_jurusan`),
   CONSTRAINT `mst_kelas_ibfk_1` FOREIGN KEY (`id_jurusan`) REFERENCES `mst_jurusan` (`id_jurusan`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -103,7 +103,7 @@ CREATE TABLE `mst_mapel` (
   UNIQUE KEY `kode_mapel` (`kode_mapel`),
   KEY `id_jurusan` (`id_jurusan`),
   CONSTRAINT `mst_mapel_ibfk_1` FOREIGN KEY (`id_jurusan`) REFERENCES `mst_jurusan` (`id_jurusan`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -118,6 +118,7 @@ CREATE TABLE `mst_pengampu` (
   `id_guru` int(11) NOT NULL,
   `id_mapel` int(11) NOT NULL,
   `id_kelas` int(11) NOT NULL,
+  `kode_guru` int(11) DEFAULT NULL,
   `tanggal_buat` timestamp NOT NULL DEFAULT current_timestamp(),
   `tanggal_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `diubah_oleh` varchar(50) DEFAULT NULL,
@@ -125,10 +126,11 @@ CREATE TABLE `mst_pengampu` (
   UNIQUE KEY `uniq_guru_mapel_kelas` (`id_guru`,`id_mapel`,`id_kelas`),
   KEY `id_mapel` (`id_mapel`),
   KEY `id_kelas` (`id_kelas`),
+  KEY `idx_pengampu_mapel_kode` (`id_mapel`,`kode_guru`),
   CONSTRAINT `mst_pengampu_ibfk_1` FOREIGN KEY (`id_guru`) REFERENCES `mst_guru` (`id_guru`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `mst_pengampu_ibfk_2` FOREIGN KEY (`id_mapel`) REFERENCES `mst_mapel` (`id_mapel`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `mst_pengampu_ibfk_3` FOREIGN KEY (`id_kelas`) REFERENCES `mst_kelas` (`id_kelas`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -149,7 +151,7 @@ CREATE TABLE `mst_ruangan` (
   `diubah_oleh` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id_ruangan`),
   UNIQUE KEY `kode_ruangan` (`kode_ruangan`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -174,7 +176,7 @@ CREATE TABLE `mst_siswa` (
   UNIQUE KEY `uq_mst_siswa_nisn` (`nisn`),
   KEY `id_kelas` (`id_kelas`),
   CONSTRAINT `mst_siswa_ibfk_1` FOREIGN KEY (`id_kelas`) REFERENCES `mst_kelas` (`id_kelas`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=106 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=379 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -234,7 +236,7 @@ CREATE TABLE `trx_jadwal` (
   CONSTRAINT `trx_jadwal_ibfk_2` FOREIGN KEY (`id_kelas`) REFERENCES `mst_kelas` (`id_kelas`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `trx_jadwal_ibfk_3` FOREIGN KEY (`id_ruangan`) REFERENCES `mst_ruangan` (`id_ruangan`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `trx_jadwal_ibfk_4` FOREIGN KEY (`id_guru`) REFERENCES `mst_guru` (`id_guru`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -259,7 +261,7 @@ CREATE TABLE `trx_nilai` (
   KEY `id_siswa` (`id_siswa`),
   CONSTRAINT `trx_nilai_ibfk_1` FOREIGN KEY (`id_ujian`) REFERENCES `trx_jadwal` (`id_ujian`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `trx_nilai_ibfk_2` FOREIGN KEY (`id_siswa`) REFERENCES `mst_siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -286,7 +288,7 @@ CREATE TABLE `trx_peserta` (
   KEY `id_siswa` (`id_siswa`),
   CONSTRAINT `trx_peserta_ibfk_1` FOREIGN KEY (`id_ujian`) REFERENCES `trx_jadwal` (`id_ujian`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `trx_peserta_ibfk_2` FOREIGN KEY (`id_siswa`) REFERENCES `mst_siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=64 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -313,7 +315,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `id_guru` (`id_guru`),
   CONSTRAINT `users_ibfk_1` FOREIGN KEY (`id_guru`) REFERENCES `mst_guru` (`id_guru`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `CONSTRAINT_1` CHECK (`role` = 'admin' and `id_guru` is null or `role` = 'guru' and `id_guru` is not null)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -329,4 +331,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-10 10:17:28
+-- Dump completed on 2026-11-18  9:10:55
