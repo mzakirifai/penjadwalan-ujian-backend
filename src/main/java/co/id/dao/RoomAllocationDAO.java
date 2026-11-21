@@ -40,6 +40,8 @@ public interface RoomAllocationDAO {
     /** Ruangan yang dipakai sesi LAIN yang waktunya bertumpuk (sesi dengan jam persis sama tidak dihitung). */
     public Set<Integer> getBusyRoomIds(LocalDate date, LocalTime start, LocalTime end);
 
+    /** Seperti getBusyRoomIds, dengan keterangan pemakai: roomId -> mis. "X DKV (07:30-09:00)". */
+    public Map<Integer, String> getRoomUsages(LocalDate date, LocalTime start, LocalTime end);
     /** Guru yang mengawasi sesi LAIN yang waktunya bertumpuk. */
     public Set<Integer> getBusyTeacherIds(LocalDate date, LocalTime start, LocalTime end);
 

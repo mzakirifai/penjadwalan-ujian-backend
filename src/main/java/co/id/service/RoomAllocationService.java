@@ -12,6 +12,12 @@ public interface RoomAllocationService {
 
     /** Ruangan yang belum dipakai sesi lain yang waktunya bertumpuk. */
     public List<Room> getUsableRooms(ExamSession session);
+    /** Semua ruangan beserta keterangan bila sedang dipakai sesi lain yang waktunya bertumpuk. */
+    public List<co.id.model.RoomAvailability> getRoomAvailability(ExamSession session);
+    /** Jumlah kursi yang dibutuhkan sesi ini (seluruh siswa kelas + peserta terdaftar per jadwal). */
+    public int countSeatsNeeded(ExamSession session);
+    /** Ruangan kosong yang dipilih otomatis: sesedikit mungkin, kursi kosong paling sedikit. */
+    public List<Room> suggestRooms(ExamSession session);
 
     /** Membuat penempatan campur untuk sesi ini ke ruangan-ruangan terpilih. Belum disimpan. */
     public RoomPlan generate(ExamSession session, List<Room> rooms);

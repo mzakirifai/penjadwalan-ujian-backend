@@ -12,6 +12,7 @@ import co.id.model.ExamSchedule;
 import co.id.model.ExamSession;
 import co.id.model.Room;
 import co.id.model.RoomAssignment;
+import co.id.model.RoomAvailability;
 import co.id.model.RoomPlan;
 import co.id.model.SeatAssignment;
 import co.id.model.Student;
@@ -68,6 +69,145 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
     }
 
     @Override
+    public List<RoomAvailability> getRoomAvailability(ExamSession session) {
+        Map<Integer, String> usages = roomAllocationDAO.getRoomUsages(session.getDate(), session.getStartTime(), session.getEndTime());
+        return masterService.getAllRooms().stream()
+                .filter(r -> r.getCapacity() > 0)
+                .sorted(Comparator.comparing(Room::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(r -> new RoomAvailability(r, usages.get(r.getId())))
+                .collect(Collectors.toList());
+    }
+
+    // Siswa satu jadwal: seluruh siswa kelasnya + peserta yang sudah terdaftar dari luar kelas
+    private Map<Integer, Student> studentsOf(ExamSchedule schedule, List<SeatRow> registeredRows) {
+        Map<Integer, Student> students = new LinkedHashMap<>();
+        if (schedule.getClassroom() != null) {
+            for (Student student : studentDAO.getByClassroom(schedule.getClassroom().getId())) {
+                students.put(student.getId(), student);
+            }
+        }
+        for (SeatRow row : registeredRows) {
+            if (!students.containsKey(row.studentId)) {
+                Student extra = new Student();
+                extra.setId(row.studentId);
+                extra.setNis(row.nis);
+                extra.setName(row.studentName);
+                students.put(row.studentId, extra);
+            }
+        }
+        return students;
+    }
+
+    /** Hitung kursi yang dibutuhkan sesi ini (persis seperti generate) dan jumlah jadwal yang punya siswa. */
+    private int[] seatDemand(ExamSession session) {
+        List<Integer> scheduleIds = session.getSchedules().stream().map(ExamSchedule::getId).collect(Collectors.toList());
+        Map<Integer, List<SeatRow>> rowsBySchedule = roomAllocationDAO.getSeatRows(scheduleIds).stream()
+                .collect(Collectors.groupingBy(r -> r.scheduleId));
+        int seats = 0;
+        int groups = 0;
+        for (ExamSchedule schedule : session.getSchedules()) {
+            int size = studentsOf(schedule, rowsBySchedule.getOrDefault(schedule.getId(), List.of())).size();
+            if (size > 0) {
+                seats += size;
+                groups++;
+            }
+        }
+        return new int[]{seats, groups};
+    }
+
+    @Override
+    public int countSeatsNeeded(ExamSession session) {
+        return seatDemand(session)[0];
+    }
+
+    /*
+     * Pilih ruangan kosong secara otomatis:
+     *  1. jumlah ruangan sesedikit mungkin, tetapi minimal ceil(jumlah kelas / 3) karena satu ruangan
+     *     maksimal berisi 3 kelas (aturan pencampuran);
+     *  2. dari kombinasi dengan jumlah ruangan itu, kursi kosong paling sedikit;
+     *  3. lalu ruangan yang tersebar di lantai paling sedikit, lalu urutan nama.
+     * Bila kapasitas semua ruangan kosong tidak cukup, semua ruangan kosong dipilih (generate akan memberi peringatan).
+     */
+    @Override
+    public List<Room> suggestRooms(ExamSession session) {
+        List<Room> free = getRoomAvailability(session).stream()
+                .filter(RoomAvailability::isAvailable)
+                .map(RoomAvailability::getRoom)
+                .sorted(Comparator.comparingInt(Room::getCapacity).reversed()
+                        .thenComparing(Room::getName, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+        int[] demand = seatDemand(session);
+        int needed = demand[0];
+        if (free.isEmpty() || needed == 0) {
+            return List.of();
+        }
+        int totalFree = free.stream().mapToInt(Room::getCapacity).sum();
+        if (totalFree <= needed) {
+            return free;
+        }
+
+        int minRooms = Math.max(1, (demand[1] + 2) / 3);
+        for (int k = minRooms; k <= free.size(); k++) {
+            int best = bestCombination(free, k, needed);
+            if (best >= 0) {
+                return bestRooms;
+            }
+        }
+        return free;
+    }
+
+    // hasil pencarian kombinasi terbaik (dipakai suggestRooms)
+    private List<Room> bestRooms;
+    private int bestCapacity;
+    private int bestFloors;
+
+    // Cari kombinasi k ruangan dengan kapasitas >= needed dan kapasitas total terkecil; -1 bila tidak ada
+    private int bestCombination(List<Room> rooms, int k, int needed) {
+        // batas atas: k ruangan terbesar pun tidak cukup -> mustahil
+        int top = 0;
+        for (int i = 0; i < k && i < rooms.size(); i++) {
+            top += rooms.get(i).getCapacity();
+        }
+        if (top < needed) {
+            return -1;
+        }
+        bestRooms = null;
+        bestCapacity = Integer.MAX_VALUE;
+        bestFloors = Integer.MAX_VALUE;
+        search(rooms, k, needed, 0, new ArrayList<>(), 0);
+        return bestRooms == null ? -1 : bestCapacity;
+    }
+
+    private void search(List<Room> rooms, int k, int needed, int from, List<Room> chosen, int capacity) {
+        if (chosen.size() == k) {
+            if (capacity < needed) {
+                return;
+            }
+            int floors = (int) chosen.stream().map(Room::getFloor).distinct().count();
+            if (capacity < bestCapacity || (capacity == bestCapacity && floors < bestFloors)) {
+                bestCapacity = capacity;
+                bestFloors = floors;
+                bestRooms = new ArrayList<>(chosen);
+            }
+            return;
+        }
+        int remaining = k - chosen.size();
+        for (int i = from; i <= rooms.size() - remaining; i++) {
+            // ruangan diurutkan dari kapasitas terbesar: bila sisa ruangan terbesar pun tidak cukup, hentikan cabang ini
+            int optimistic = capacity;
+            for (int j = i; j < i + remaining; j++) {
+                optimistic += rooms.get(j).getCapacity();
+            }
+            if (optimistic < needed) {
+                break;
+            }
+            chosen.add(rooms.get(i));
+            search(rooms, k, needed, i + 1, chosen, capacity + rooms.get(i).getCapacity());
+            chosen.remove(chosen.size() - 1);
+        }
+    }
+
+    @Override
     public RoomPlan generate(ExamSession session, List<Room> rooms) {
         if (rooms == null || rooms.isEmpty()) {
             throw new IllegalArgumentException("Pilih minimal satu ruangan.");
@@ -86,21 +226,7 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
         Map<Integer, Integer> studentGroupCount = new HashMap<>();
         Map<Integer, String> studentNames = new HashMap<>();
         for (ExamSchedule schedule : schedules) {
-            Map<Integer, Student> students = new LinkedHashMap<>();
-            if (schedule.getClassroom() != null) {
-                for (Student student : studentDAO.getByClassroom(schedule.getClassroom().getId())) {
-                    students.put(student.getId(), student);
-                }
-            }
-            for (SeatRow row : rowsBySchedule.getOrDefault(schedule.getId(), List.of())) {
-                if (!students.containsKey(row.studentId)) {
-                    Student extra = new Student();
-                    extra.setId(row.studentId);
-                    extra.setNis(row.nis);
-                    extra.setName(row.studentName);
-                    students.put(row.studentId, extra);
-                }
-            }
+            Map<Integer, Student> students = studentsOf(schedule, rowsBySchedule.getOrDefault(schedule.getId(), List.of()));
 
             List<Student> ordered = new ArrayList<>(students.values());
             ordered.sort(Comparator.comparing(s -> s.getName() == null ? "" : s.getName(), String.CASE_INSENSITIVE_ORDER));

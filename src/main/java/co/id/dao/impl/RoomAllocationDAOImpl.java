@@ -93,6 +93,52 @@ public class RoomAllocationDAOImpl extends DatabaseConfiguration implements Room
         return queryIds(sql, date, start, end, 2);
     }
 
+    // Sama dengan getBusyRoomIds (kondisi persis sama), tetapi menyertakan kelas & jam pemakainya
+    @Override
+    public Map<Integer, String> getRoomUsages(LocalDate date, LocalTime start, LocalTime end) {
+        String overlap = "AND {t}.jam_mulai < ? AND {t}.jam_selesai > ? AND NOT ({t}.jam_mulai = ? AND {t}.jam_selesai = ?)";
+        String sql = "SELECT ej.id_ruangan AS id, COALESCE(k.nama_kelas, '-') AS kelas, ej.jam_mulai, ej.jam_selesai "
+                + "FROM trx_jadwal ej LEFT JOIN mst_kelas k ON k.id_kelas = ej.id_kelas "
+                + "WHERE ej.id_ruangan IS NOT NULL AND ej.tanggal = ? " + overlap.replace("{t}", "ej")
+                + " UNION SELECT ep.id_ruangan AS id, COALESCE(k.nama_kelas, '-') AS kelas, ej.jam_mulai, ej.jam_selesai "
+                + "FROM trx_peserta ep JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
+                + "LEFT JOIN mst_kelas k ON k.id_kelas = ej.id_kelas "
+                + "WHERE ep.id_ruangan IS NOT NULL AND ej.tanggal = ? " + overlap.replace("{t}", "ej")
+                + " ORDER BY id, jam_mulai, jam_selesai, kelas";
+
+        // roomId -> (rentang jam -> daftar kelas), lalu dirangkai jadi teks
+        Map<Integer, Map<String, java.util.Set<String>>> grouped = new java.util.TreeMap<>();
+        java.time.format.DateTimeFormatter hhmm = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+            int index = 1;
+            for (int p = 0; p < 2; p++) {
+                ps.setObject(index++, date);
+                ps.setObject(index++, end);
+                ps.setObject(index++, start);
+                ps.setObject(index++, start);
+                ps.setObject(index++, end);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String slot = rs.getTime("jam_mulai").toLocalTime().format(hhmm) + "-"
+                            + rs.getTime("jam_selesai").toLocalTime().format(hhmm);
+                    grouped.computeIfAbsent(rs.getInt("id"), k -> new java.util.LinkedHashMap<>())
+                            .computeIfAbsent(slot, k -> new java.util.LinkedHashSet<>())
+                            .add(rs.getString("kelas"));
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Gagal membaca pemakaian ruangan: " + e.getMessage(), e);
+        }
+
+        Map<Integer, String> usages = new HashMap<>();
+        grouped.forEach((roomId, slots) -> usages.put(roomId, slots.entrySet().stream()
+                .map(e -> String.join(", ", e.getValue()) + " (" + e.getKey() + ")")
+                .collect(java.util.stream.Collectors.joining("; "))));
+        return usages;
+    }
+
     @Override
     public Set<Integer> getBusyTeacherIds(LocalDate date, LocalTime start, LocalTime end) {
         String overlap = "AND {t}.jam_mulai < ? AND {t}.jam_selesai > ? AND NOT ({t}.jam_mulai = ? AND {t}.jam_selesai = ?)";
