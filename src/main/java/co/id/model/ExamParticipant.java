@@ -14,6 +14,7 @@ public class ExamParticipant {
     // Relasi Many-to-one
     private ExamSchedule examSchedule;
     private Student student;
+    private Room room; // ruangan peserta (ruangan campur); null = ikut ruangan jadwal
 
     public ExamParticipant() {
     }
@@ -93,6 +94,9 @@ public class ExamParticipant {
     public void setExamSchedule(ExamSchedule examSchedule) {
         this.examSchedule = examSchedule;
     }
+
+    public Room getRoom() { return room; }
+    public void setRoom(Room room) { this.room = room; }
 
     public Student getStudent() {
         return student;

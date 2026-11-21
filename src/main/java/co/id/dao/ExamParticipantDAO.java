@@ -17,6 +17,8 @@ public interface ExamParticipantDAO {
     public void saveOrUpdate(ExamParticipant examParticipant);
     public void delete(int id);
     public boolean isSeatTaken(int examScheduleId, String seatNumber, int excludeStudentId);
+    /** Kursi di ruangan tertentu sudah dipakai peserta ujian mana pun yang waktunya bertumpuk (ruangan campur). */
+    public boolean isSeatTakenInRoom(int examScheduleId, int roomId, String seatNumber, int excludeStudentId);
     public boolean isParticipantNumberTaken(int examScheduleId, String participantNumber, int excludeStudentId);
     public boolean isStudentRegistered(int examScheduleId, int studentId);
 }

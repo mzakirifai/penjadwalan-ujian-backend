@@ -1,6 +1,8 @@
 package co.id.service;
 
 import co.id.model.ExamSchedule;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface ExamScheduleService {
@@ -18,6 +20,12 @@ public interface ExamScheduleService {
             java.time.LocalDate end);
     public void save(ExamSchedule examSchedule, String currentUsername, String currentUserRole);
     public void delete(int id, String currentUserRole);
+    /** Bentrokan (ruangan / kelas / pengawas) untuk rentang waktu ini; kosong jika tidak ada. */
+    public List<co.id.model.ScheduleConflict> findConflicts(LocalDate date, LocalTime startTime, LocalTime endTime,
+            int roomId, int classroomId, int teacherId, int excludeId);
+    /** Ruangan kosong pada rentang waktu ini, yang paling pas untuk kelas tersebut di urutan pertama. */
+    public List<co.id.model.RoomSuggestion> suggestRooms(LocalDate date, LocalTime startTime, LocalTime endTime,
+            int excludeId, Integer classroomId);
     public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, Integer teacherCode, String examType,
         String semester, String academicYear, int excludeId);
 }

@@ -372,14 +372,22 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
     @Override
     public boolean hasConflict(LocalDate date, LocalTime startTime, LocalTime endTime, int roomId, int classroomId, int teacherId, int excludeId) {
-        // Bentrok kalau: tanggal sama, DAN (ruang ATAU kelas ATAU guru sama),
-        // DAN rentang waktu saling overlap (mulai_baru < selesai_lama DAN selesai_baru > mulai_lama)
-        String sql = "SELECT COUNT(*) AS total FROM trx_jadwal "
-                + "WHERE tanggal = ? "
-                + "AND (id_ruangan = ? OR id_kelas = ? OR id_guru = ?) "
-                + "AND jam_mulai < ? AND jam_selesai > ? "
-                + "AND id_ujian <> ?";
+        return !findOverlapping(date, startTime, endTime, roomId, classroomId, teacherId, excludeId).isEmpty();
+    }
 
+    // Bentrok kalau: tanggal sama, DAN (ruang ATAU kelas ATAU guru sama),
+    // DAN rentang waktu saling overlap (mulai_baru < selesai_lama DAN selesai_baru > mulai_lama).
+    // Jika query gagal, exception dilempar (tidak lagi dianggap "tidak bentrok").
+    @Override
+    public List<ExamSchedule> findOverlapping(LocalDate date, LocalTime startTime, LocalTime endTime,
+                                              int roomId, int classroomId, int teacherId, int excludeId) {
+        String sql = SELECT_JOIN
+                + "WHERE ej.tanggal = ? "
+                + "AND (ej.id_ruangan = ? OR ej.id_kelas = ? OR ej.id_guru = ?) "
+                + "AND ej.jam_mulai < ? AND ej.jam_selesai > ? "
+                + "AND ej.id_ujian <> ? ORDER BY ej.jam_mulai";
+
+        List<ExamSchedule> result = new ArrayList<>();
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
@@ -392,17 +400,50 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
             preparedStatement.setInt(7, excludeId);
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) {
-                    return resultSet.getInt("total") > 0;
+                while (resultSet.next()) {
+                    result.add(mapResultSetToExamSchedule(resultSet));
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            throw new IllegalStateException("Gagal memeriksa bentrok jadwal: " + exception.getMessage(), exception);
         }
-
-        return false;
+        return result;
     }
-    
+
+    @Override
+    public List<Room> getAvailableRooms(LocalDate date, LocalTime startTime, LocalTime endTime, int excludeId) {
+        String sql = "SELECT r.id_ruangan, r.kode_ruangan, r.nama_ruangan, r.lantai, r.kapasitas "
+                + "FROM mst_ruangan r WHERE NOT EXISTS ("
+                + "SELECT 1 FROM trx_jadwal ej WHERE ej.id_ruangan = r.id_ruangan AND ej.tanggal = ? "
+                + "AND ej.jam_mulai < ? AND ej.jam_selesai > ? AND ej.id_ujian <> ?) "
+                + "ORDER BY r.nama_ruangan";
+
+        List<Room> rooms = new ArrayList<>();
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setObject(1, date);
+            preparedStatement.setObject(2, endTime);
+            preparedStatement.setObject(3, startTime);
+            preparedStatement.setInt(4, excludeId);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Room room = new Room();
+                    room.setId(resultSet.getInt("id_ruangan"));
+                    room.setCode(resultSet.getString("kode_ruangan"));
+                    room.setName(resultSet.getString("nama_ruangan"));
+                    room.setFloor(resultSet.getInt("lantai"));
+                    room.setCapacity(resultSet.getInt("kapasitas"));
+                    rooms.add(room);
+                }
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal mencari ruangan kosong: " + exception.getMessage(), exception);
+        }
+        return rooms;
+    }
+
     @Override
     public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, Integer teacherCode, String examType,
             String semester, String academicYear, int excludeId) {

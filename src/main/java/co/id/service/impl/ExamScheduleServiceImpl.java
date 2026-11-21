@@ -3,12 +3,16 @@ package co.id.service.impl;
 import co.id.dao.ExamScheduleDAO;
 import co.id.dao.impl.ExamScheduleDAOImpl;
 import co.id.model.ExamSchedule;
+import co.id.model.RoomSuggestion;
+import co.id.model.ScheduleConflict;
+import co.id.service.ScheduleConflictException;
 import co.id.service.ExamScheduleService;
 import java.util.List;
 
 public class ExamScheduleServiceImpl implements ExamScheduleService {
 
     private final ExamScheduleDAO examScheduleDAO = new ExamScheduleDAOImpl();
+    private final co.id.dao.StudentDAO studentDAO = new co.id.dao.impl.StudentDAOImpl();
 
     @Override
     public List<ExamSchedule> getAllExamSchedules() {
@@ -66,23 +70,71 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         validate(examSchedule);
 
         int excludeId = examSchedule.getId(); // 0 kalau data baru, sehingga tidak bentrok dengan dirinya sendiri
-        boolean conflict = examScheduleDAO.hasConflict(
+        List<ScheduleConflict> conflicts = findConflicts(
                 examSchedule.getDate(),
                 examSchedule.getStartTime(),
                 examSchedule.getEndTime(),
-                examSchedule.getRoom().getId(),
+                examSchedule.getRoom() != null ? examSchedule.getRoom().getId() : 0,
                 examSchedule.getClassroom().getId(),
-                examSchedule.getTeacher().getId(),
+                examSchedule.getTeacher() != null ? examSchedule.getTeacher().getId() : 0,
                 excludeId
         );
 
-        if (conflict) {
-            throw new IllegalStateException(
-                    "Jadwal bentrok! Ruangan, kelas, atau guru sudah terpakai pada rentang waktu ini.");
+        if (!conflicts.isEmpty()) {
+            boolean hasRoomConflict = conflicts.stream().anyMatch(c -> c.getResource() == ScheduleConflict.Resource.RUANGAN);
+            boolean roomOnly = conflicts.stream().allMatch(c -> c.getResource() == ScheduleConflict.Resource.RUANGAN);
+            List<RoomSuggestion> suggestions = hasRoomConflict
+                    ? suggestRooms(examSchedule.getDate(), examSchedule.getStartTime(), examSchedule.getEndTime(),
+                            excludeId, examSchedule.getClassroom().getId())
+                    : List.of();
+
+            StringBuilder message = new StringBuilder("Jadwal bentrok:");
+            for (ScheduleConflict conflict : conflicts) {
+                message.append("\n- ").append(conflict.describe());
+            }
+            throw new ScheduleConflictException(message.toString(), conflicts, suggestions, roomOnly);
         }
 
         examSchedule.setUpdatedBy(currentUsername);
         examScheduleDAO.saveOrUpdate(examSchedule);
+    }
+
+    @Override
+    public List<ScheduleConflict> findConflicts(java.time.LocalDate date, java.time.LocalTime startTime,
+            java.time.LocalTime endTime, int roomId, int classroomId, int teacherId, int excludeId) {
+        List<ScheduleConflict> result = new java.util.ArrayList<>();
+        for (ExamSchedule other : examScheduleDAO.findOverlapping(date, startTime, endTime, roomId, classroomId,
+                teacherId, excludeId)) {
+            if (other.getRoom() != null && other.getRoom().getId() == roomId) {
+                result.add(new ScheduleConflict(ScheduleConflict.Resource.RUANGAN, other));
+            }
+            if (other.getClassroom() != null && other.getClassroom().getId() == classroomId) {
+                result.add(new ScheduleConflict(ScheduleConflict.Resource.KELAS, other));
+            }
+            if (other.getTeacher() != null && other.getTeacher().getId() == teacherId) {
+                result.add(new ScheduleConflict(ScheduleConflict.Resource.PENGAWAS, other));
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public List<RoomSuggestion> suggestRooms(java.time.LocalDate date, java.time.LocalTime startTime,
+            java.time.LocalTime endTime, int excludeId, Integer classroomId) {
+        int students = classroomId == null ? 0 : studentDAO.getByClassroom(classroomId).size();
+
+        List<RoomSuggestion> suggestions = new java.util.ArrayList<>();
+        for (co.id.model.Room room : examScheduleDAO.getAvailableRooms(date, startTime, endTime, excludeId)) {
+            suggestions.add(new RoomSuggestion(room, students));
+        }
+
+        // Yang muat didahulukan, mulai dari kapasitas terkecil yang cukup (hemat ruangan besar);
+        // yang tidak muat di belakang, dari yang terbesar.
+        suggestions.sort(java.util.Comparator
+                .comparing((RoomSuggestion s) -> !s.isEnoughCapacity())
+                .thenComparingInt(s -> s.isEnoughCapacity() ? s.getRoom().getCapacity() : -s.getRoom().getCapacity())
+                .thenComparing(s -> s.getRoom().getName()));
+        return suggestions;
     }
 
     @Override
@@ -134,11 +186,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         if (examSchedule.getClassroom() == null) {
             throw new IllegalArgumentException("Kelas wajib dipilih.");
         }
-        if (examSchedule.getRoom() == null) {
-            throw new IllegalArgumentException("Ruangan wajib dipilih.");
-        }
-        if (examSchedule.getTeacher() == null) {
-            throw new IllegalArgumentException("Pengawas (guru) wajib dipilih.");
-        }
+        // Ruangan dan pengawas boleh kosong: pada ujian dengan ruangan campur, keduanya diatur per ruangan
+        // lewat menu Penempatan Ruangan.
     }
 }

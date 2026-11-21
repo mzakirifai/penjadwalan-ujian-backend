@@ -65,8 +65,9 @@ public class ExamParticipantServiceImpl implements ExamParticipantService{
                     "Siswa ini sudah terdaftar sebagai peserta pada jadwal ujian yang sama.");
         }
 
-        // 2. Cek kapasitas ruangan (khusus data baru)
-        if (examParticipant.getId() == 0) {
+        // 2. Cek kapasitas ruangan (khusus data baru). Jadwal tanpa ruangan = ruangan campur, kapasitas
+        //    dijaga oleh menu Penempatan Ruangan.
+        if (examParticipant.getId() == 0 && examParticipant.getExamSchedule().getRoom() != null) {
             int currentCount = examParticipantDAO.countByExamSchedule(examScheduleId);
             int capacity = examParticipant.getExamSchedule().getRoom().getCapacity();
 
@@ -77,9 +78,15 @@ public class ExamParticipantServiceImpl implements ExamParticipantService{
         }
 
         // 3. Cek nomor kursi sudah dipakai siswa lain
-        if (examParticipantDAO.isSeatTaken(examScheduleId, examParticipant.getSeatNumber(), excludeStudentId)) {
+        // Peserta yang sudah ditempatkan di ruangan campur: kursi dicek per ruangan (dan lintas ujian pada waktu yang sama)
+        boolean seatTaken = examParticipant.getRoom() != null
+                ? examParticipantDAO.isSeatTakenInRoom(examScheduleId, examParticipant.getRoom().getId(),
+                        examParticipant.getSeatNumber(), excludeStudentId)
+                : examParticipantDAO.isSeatTaken(examScheduleId, examParticipant.getSeatNumber(), excludeStudentId);
+        if (seatTaken) {
             throw new IllegalStateException(
-                    "No. Kursi \"" + examParticipant.getSeatNumber() + "\" sudah dipakai oleh siswa lain pada ujian ini.");
+                    "No. Kursi \"" + examParticipant.getSeatNumber() + "\" sudah dipakai oleh siswa lain "
+                            + (examParticipant.getRoom() != null ? "di ruangan " + examParticipant.getRoom().getName() : "pada ujian ini") + ".");
         }
 
         // 4. Cek nomor peserta sudah dipakai siswa lain

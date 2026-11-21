@@ -22,6 +22,11 @@ public interface ExamScheduleDAO {
     public void delete(int id);
     public boolean hasConflict(LocalDate date, LocalTime startTime, LocalTime endTime,
             int roomId, int classroomId, int teacherId, int excludeId);
+    /** Jadwal lain pada tanggal + rentang waktu yang overlap yang memakai ruangan, kelas, atau pengawas yang sama. */
+    public List<ExamSchedule> findOverlapping(LocalDate date, LocalTime startTime, LocalTime endTime,
+            int roomId, int classroomId, int teacherId, int excludeId);
+    /** Ruangan yang belum dipakai jadwal mana pun pada tanggal + rentang waktu tersebut. */
+    public List<co.id.model.Room> getAvailableRooms(LocalDate date, LocalTime startTime, LocalTime endTime, int excludeId);
     public boolean hasSameSubjectForClassroom(int classroomId, int subjectId, Integer teacherCode, String examType,
         String semester, String academicYear, int excludeId);
 }

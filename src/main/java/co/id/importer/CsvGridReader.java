@@ -8,7 +8,9 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Membaca file CSV (juga .txt hasil ekspor scanner) menjadi grid teks, sama bentuknya dengan
@@ -78,24 +80,29 @@ public class CsvGridReader {
         return grid;
     }
 
-    // Pemisah = karakter yang paling sering muncul (di luar tanda kutip) pada baris pertama yang berisi
+    // Pemisah = karakter yang paling konsisten muncul (di luar tanda kutip) pada 50 baris pertama yang berisi.
+    // Baris judul atau keterangan di atas tabel (tanpa pemisah) tidak ikut menentukan, dan koma desimal
+    // di dalam data (mis. 85,5 pada file berpemisah titik koma) tidak mengalahkan pemisah yang sebenarnya.
     private static char detectDelimiter(String text) {
         char[] candidates = {',', ';', '\t', '|'};
+        List<int[]> lineCounts = new ArrayList<>();
         int[] counts = new int[candidates.length];
         boolean inQuotes = false;
-        boolean seenContent = false;
+        boolean hasContent = false;
 
-        for (int i = 0; i < text.length(); i++) {
+        for (int i = 0; i < text.length() && lineCounts.size() < 50; i++) {
             char ch = text.charAt(i);
             if (ch == '"') {
                 inQuotes = !inQuotes;
-                seenContent = true;
+                hasContent = true;
             } else if (!inQuotes && (ch == '\n' || ch == '\r')) {
-                if (seenContent) {
-                    break;
+                if (hasContent) {
+                    lineCounts.add(counts);
+                    counts = new int[candidates.length];
+                    hasContent = false;
                 }
             } else if (!inQuotes) {
-                seenContent = seenContent || !Character.isWhitespace(ch);
+                hasContent = hasContent || !Character.isWhitespace(ch);
                 for (int c = 0; c < candidates.length; c++) {
                     if (ch == candidates[c]) {
                         counts[c]++;
@@ -103,13 +110,29 @@ public class CsvGridReader {
                 }
             }
         }
+        if (hasContent) {
+            lineCounts.add(counts);
+        }
 
-        int best = 0;
-        for (int c = 1; c < candidates.length; c++) {
-            if (counts[c] > counts[best]) {
-                best = c;
+        char best = ',';
+        int bestLines = 0;
+        int bestPerLine = 0;
+        for (int c = 0; c < candidates.length; c++) {
+            // Berapa baris yang punya jumlah pemisah yang sama (modus)? Hanya baris yang memuat pemisah itu.
+            Map<Integer, Integer> frequency = new HashMap<>();
+            for (int[] line : lineCounts) {
+                if (line[c] > 0) {
+                    frequency.merge(line[c], 1, Integer::sum);
+                }
+            }
+            for (Map.Entry<Integer, Integer> entry : frequency.entrySet()) {
+                if (entry.getValue() > bestLines || (entry.getValue() == bestLines && entry.getKey() > bestPerLine)) {
+                    best = candidates[c];
+                    bestLines = entry.getValue();
+                    bestPerLine = entry.getKey();
+                }
             }
         }
-        return counts[best] == 0 ? ',' : candidates[best];
+        return best;
     }
 }

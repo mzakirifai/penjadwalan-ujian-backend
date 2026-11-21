@@ -237,7 +237,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
                 + "FROM trx_peserta ep "
                 + "JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
                 + "LEFT JOIN mst_mapel m ON ej.id_mapel = m.id_mapel "
-                + "LEFT JOIN mst_ruangan r ON ej.id_ruangan = r.id_ruangan "
+                + "LEFT JOIN mst_ruangan r ON r.id_ruangan = COALESCE(ep.id_ruangan, ej.id_ruangan) "
                 + "WHERE ep.id_siswa = ? AND ej.jenis_ujian = ? AND ej.semester = ? AND ej.tahun_akademik = ? "
                 + "ORDER BY ej.tanggal, ej.jam_mulai";
  
