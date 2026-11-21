@@ -56,7 +56,6 @@ public class PlacementSummary {
     private final List<RoomUsage> rooms = new ArrayList<>();
     private int classStudentCount;   // jumlah siswa di kelas jadwal ini
     private int unplacedCount;       // siswa kelas yang belum mendapat kursi
-    private boolean legacy;          // ruangan/pengawas masih tercatat langsung di trx_jadwal (data lama)
 
     public PlacementSummary(int scheduleId) {
         this.scheduleId = scheduleId;
@@ -68,8 +67,6 @@ public class PlacementSummary {
     public void setClassStudentCount(int classStudentCount) { this.classStudentCount = classStudentCount; }
     public int getUnplacedCount() { return unplacedCount; }
     public void setUnplacedCount(int unplacedCount) { this.unplacedCount = unplacedCount; }
-    public boolean isLegacy() { return legacy; }
-    public void setLegacy(boolean legacy) { this.legacy = legacy; }
 
     public int getRoomsWithoutSupervisor() {
         return (int) rooms.stream().filter(r -> r.getSupervisorName() == null).count();
@@ -79,7 +76,7 @@ public class PlacementSummary {
         if (rooms.isEmpty()) {
             return classStudentCount == 0 ? Status.TANPA_SISWA : Status.BELUM;
         }
-        if (!legacy && unplacedCount > 0) {
+        if (unplacedCount > 0) {
             return Status.SEBAGIAN;
         }
         if (getRoomsWithoutSupervisor() > 0) {
@@ -97,16 +94,13 @@ public class PlacementSummary {
         } else if (status == Status.TANPA_PENGAWAS && rooms.size() > 1) {
             label += " (" + getRoomsWithoutSupervisor() + " ruangan)";
         }
-        return legacy ? label + " - data lama" : label;
+        return label;
     }
 
     /** Teks kolom Ruangan, mis. "R004 (20), R001 (14)"; jadwal lama cukup nama ruangannya. */
     public String getRoomsLabel() {
         if (rooms.isEmpty()) {
             return "Belum ditempatkan";
-        }
-        if (legacy) {
-            return rooms.get(0).getName();
         }
         return rooms.stream()
                 .map(r -> r.getShortName() + " (" + r.getStudentCount() + ")")
@@ -120,7 +114,7 @@ public class PlacementSummary {
         }
         return rooms.stream()
                 .map(r -> r.getShortName() + " - " + r.getName()
-                        + (legacy ? "" : ": " + r.getStudentCount() + " siswa")
+                        + ": " + r.getStudentCount() + " siswa"
                         + ", pengawas: " + (r.getSupervisorName() != null ? r.getSupervisorName() : "belum ada"))
                 .collect(Collectors.joining("\n"));
     }

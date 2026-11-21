@@ -118,6 +118,21 @@ public class MasterServiceImpl implements MasterService{
         return teacherDAO.saveBatch(teachers);
     }
 
+    // Hapus data master. Bila ditolak foreign key (data masih dipakai, ON DELETE RESTRICT),
+    // tampilkan pesan yang bisa dimengerti admin, bukan pesan mentah dari MySQL.
+    private static void deleteSafely(Runnable delete, String messageWhenInUse) {
+        try {
+            delete.run();
+        } catch (RuntimeException exception) {
+            for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+                if (cause instanceof java.sql.SQLIntegrityConstraintViolationException) {
+                    throw new IllegalStateException(messageWhenInUse, exception);
+                }
+            }
+            throw exception;
+        }
+    }
+
     // NIP dirapikan: spasi dibuang, kosong menjadi null
     private static String normalizeNip(String nip) {
         if (nip == null) {
@@ -130,7 +145,8 @@ public class MasterServiceImpl implements MasterService{
     @Override
     public void deleteTeacher(int id, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
-        teacherDAO.delete(id);
+        deleteSafely(() -> teacherDAO.delete(id),
+                "Guru ini tidak bisa dihapus karena masih menjadi pengawas di Penempatan Ruangan. Ganti pengawasnya terlebih dahulu.");
     }
 
     // Major
@@ -208,7 +224,8 @@ public class MasterServiceImpl implements MasterService{
     @Override
     public void deleteClassroom(int id, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
-        classroomDAO.delete(id);
+        deleteSafely(() -> classroomDAO.delete(id),
+                "Kelas ini tidak bisa dihapus karena masih punya jadwal ujian. Hapus atau ubah jadwal ujiannya terlebih dahulu.");
     }
 
     // Student
@@ -369,7 +386,8 @@ public class MasterServiceImpl implements MasterService{
     @Override
     public void deleteSubject(int id, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
-        subjectDAO.delete(id);
+        deleteSafely(() -> subjectDAO.delete(id),
+                "Mapel ini tidak bisa dihapus karena masih dipakai di jadwal ujian. Hapus atau ubah jadwal ujiannya terlebih dahulu.");
     }
 
     // Room
@@ -408,7 +426,8 @@ public class MasterServiceImpl implements MasterService{
     @Override
     public void deleteRoom(int id, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
-        roomDAO.delete(id);
+        deleteSafely(() -> roomDAO.delete(id),
+                "Ruangan ini tidak bisa dihapus karena masih dipakai di Penempatan Ruangan (kursi peserta atau pengawas). Pindahkan penempatannya terlebih dahulu.");
     }
     
     private void ensureIsAdmin(String currentUserRole) {

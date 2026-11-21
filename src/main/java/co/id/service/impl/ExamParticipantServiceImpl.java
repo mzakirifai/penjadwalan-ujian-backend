@@ -65,19 +65,9 @@ public class ExamParticipantServiceImpl implements ExamParticipantService{
                     "Siswa ini sudah terdaftar sebagai peserta pada jadwal ujian yang sama.");
         }
 
-        // 2. Cek kapasitas ruangan (khusus data baru). Jadwal tanpa ruangan = ruangan campur, kapasitas
-        //    dijaga oleh menu Penempatan Ruangan.
-        if (examParticipant.getId() == 0 && examParticipant.getExamSchedule().getRoom() != null) {
-            int currentCount = examParticipantDAO.countByExamSchedule(examScheduleId);
-            int capacity = examParticipant.getExamSchedule().getRoom().getCapacity();
+        // (Kapasitas ruangan dijaga oleh menu Penempatan Ruangan: ruangan tidak lagi melekat pada jadwal.)
 
-            if (currentCount >= capacity) {
-                throw new IllegalStateException(
-                        "Ruangan sudah penuh! Kapasitas maksimal " + capacity + " peserta.");
-            }
-        }
-
-        // 3. Cek nomor kursi sudah dipakai siswa lain
+        // 2. Cek nomor kursi sudah dipakai siswa lain
         // Peserta yang sudah ditempatkan di ruangan campur: kursi dicek per ruangan (dan lintas ujian pada waktu yang sama)
         boolean seatTaken = examParticipant.getRoom() != null
                 ? examParticipantDAO.isSeatTakenInRoom(examScheduleId, examParticipant.getRoom().getId(),
@@ -89,7 +79,7 @@ public class ExamParticipantServiceImpl implements ExamParticipantService{
                             + (examParticipant.getRoom() != null ? "di ruangan " + examParticipant.getRoom().getName() : "pada ujian ini") + ".");
         }
 
-        // 4. Cek nomor peserta sudah dipakai siswa lain
+        // 3. Cek nomor peserta sudah dipakai siswa lain
         if (examParticipantDAO.isParticipantNumberTaken(examScheduleId, examParticipant.getParticipantNumber(), excludeStudentId)) {
             throw new IllegalStateException(
                     "No. Peserta \"" + examParticipant.getParticipantNumber() + "\" sudah dipakai oleh siswa lain pada ujian ini.");

@@ -25,14 +25,10 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
     private static final String SELECT_JOIN =
             "SELECT ej.*, "
             + "s.id_mapel, s.kode_mapel, s.nama_mapel, s.tingkat AS mapel_tingkat, s.jenis AS mapel_jenis, s.kkm, "
-            + "k.id_kelas, k.kode_kelas, k.nama_kelas, k.tingkat AS kelas_tingkat, "
-            + "r.id_ruangan, r.kode_ruangan, r.nama_ruangan, r.lantai, r.kapasitas, "
-            + "g.id_guru, g.nip, g.nama_guru "
+            + "k.id_kelas, k.kode_kelas, k.nama_kelas, k.tingkat AS kelas_tingkat "
             + "FROM trx_jadwal ej "
             + "LEFT JOIN mst_mapel s ON ej.id_mapel = s.id_mapel "
-            + "LEFT JOIN mst_kelas k ON ej.id_kelas = k.id_kelas "
-            + "LEFT JOIN mst_ruangan r ON ej.id_ruangan = r.id_ruangan "
-            + "LEFT JOIN mst_guru g ON ej.id_guru = g.id_guru ";
+            + "LEFT JOIN mst_kelas k ON ej.id_kelas = k.id_kelas ";
     
     @Override
     public List<ExamSchedule> getAllExamSchedules() {
@@ -209,10 +205,24 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
     
     @Override
     public List<ExamSchedule> getByTeacherAndPeriod(int teacherId, String examType, String semester, String academicYear) {
+        // Satu baris = satu jadwal (kelas + mapel) yang punya peserta di ruangan yang diawasi guru ini
+        // pada sesinya. Ruangan campur menghasilkan beberapa baris (satu per kelas) dengan ruangan yang sama.
+        // Ruangan & pengawas hasil penempatan dibawa lewat examSchedule.setRoom/setTeacher.
         List<ExamSchedule> schedules = new ArrayList<>();
-        String sql = SELECT_JOIN
-                + "WHERE ej.id_guru = ? AND ej.jenis_ujian = ? AND ej.semester = ? AND ej.tahun_akademik = ? "
-                + "ORDER BY ej.tanggal, ej.jam_mulai";
+        String sql = "SELECT ej.*, "
+                + "s.id_mapel, s.kode_mapel, s.nama_mapel, s.tingkat AS mapel_tingkat, s.jenis AS mapel_jenis, s.kkm, "
+                + "k.id_kelas, k.kode_kelas, k.nama_kelas, k.tingkat AS kelas_tingkat, "
+                + "r.id_ruangan, r.kode_ruangan, r.nama_ruangan, r.lantai, r.kapasitas, "
+                + "g.id_guru, g.nip, g.nama_guru "
+                + "FROM trx_pengawas_ruangan pr "
+                + "JOIN trx_jadwal ej ON ej.tanggal = pr.tanggal AND ej.jam_mulai = pr.jam_mulai AND ej.jam_selesai = pr.jam_selesai "
+                + "JOIN mst_ruangan r ON r.id_ruangan = pr.id_ruangan "
+                + "JOIN mst_guru g ON g.id_guru = pr.id_guru "
+                + "LEFT JOIN mst_mapel s ON ej.id_mapel = s.id_mapel "
+                + "LEFT JOIN mst_kelas k ON ej.id_kelas = k.id_kelas "
+                + "WHERE pr.id_guru = ? AND ej.jenis_ujian = ? AND ej.semester = ? AND ej.tahun_akademik = ? "
+                + "AND EXISTS (SELECT 1 FROM trx_peserta ep WHERE ep.id_ujian = ej.id_ujian AND ep.id_ruangan = pr.id_ruangan) "
+                + "ORDER BY ej.tanggal, ej.jam_mulai, r.nama_ruangan, k.nama_kelas";
 
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -224,11 +234,24 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
-                    schedules.add(mapResultSetToExamSchedule(resultSet));
+                    ExamSchedule schedule = mapResultSetToExamSchedule(resultSet);
+                    Room room = new Room();
+                    room.setId(resultSet.getInt("id_ruangan"));
+                    room.setCode(resultSet.getString("kode_ruangan"));
+                    room.setName(resultSet.getString("nama_ruangan"));
+                    room.setFloor(resultSet.getInt("lantai"));
+                    room.setCapacity(resultSet.getInt("kapasitas"));
+                    schedule.setRoom(room);
+                    Teacher teacher = new Teacher();
+                    teacher.setId(resultSet.getInt("id_guru"));
+                    teacher.setNip(resultSet.getString("nip"));
+                    teacher.setName(resultSet.getString("nama_guru"));
+                    schedule.setTeacher(teacher);
+                    schedules.add(schedule);
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            throw new IllegalStateException("Gagal membaca jadwal mengawas guru: " + exception.getMessage(), exception);
         }
 
         return schedules;
@@ -265,16 +288,13 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
         saveOrUpdate(examSchedule, false);
     }
 
-    // Jadwal dianggap sudah ditempatkan bila ada peserta yang sudah punya ruangan,
-    // atau (data lama) ruangan/pengawas masih tercatat langsung di trx_jadwal.
+    // Jadwal dianggap sudah ditempatkan bila ada pesertanya yang sudah mendapat ruangan
     @Override
     public boolean hasPlacement(int scheduleId) {
-        String sql = "SELECT (EXISTS (SELECT 1 FROM trx_peserta WHERE id_ujian = ? AND id_ruangan IS NOT NULL) "
-                + "OR EXISTS (SELECT 1 FROM trx_jadwal WHERE id_ujian = ? AND (id_ruangan IS NOT NULL OR id_guru IS NOT NULL))) AS placed";
+        String sql = "SELECT EXISTS (SELECT 1 FROM trx_peserta WHERE id_ujian = ? AND id_ruangan IS NOT NULL) AS placed";
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setInt(1, scheduleId);
-            preparedStatement.setInt(2, scheduleId);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 return resultSet.next() && resultSet.getBoolean("placed");
             }
@@ -313,10 +333,10 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
     @Override
     public void saveOrUpdate(ExamSchedule examSchedule, boolean resetPlacement) {
-        String sqlInsert = "INSERT INTO trx_jadwal(jenis_ujian, semester, tahun_akademik, tanggal, jam_mulai, jam_selesai, id_mapel, id_kelas, id_ruangan, id_guru, keterangan, diubah_oleh, kode_guru) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sqlInsert = "INSERT INTO trx_jadwal(jenis_ujian, semester, tahun_akademik, tanggal, jam_mulai, jam_selesai, id_mapel, id_kelas, keterangan, diubah_oleh, kode_guru) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         String sqlUpdate = "UPDATE trx_jadwal SET jenis_ujian = ?, semester = ?, tahun_akademik = ?, tanggal = ?, jam_mulai = ?, jam_selesai = ?, "
-                + "id_mapel = ?, id_kelas = ?, id_ruangan = ?, id_guru = ?, keterangan = ?, diubah_oleh = ?, kode_guru = ? WHERE id_ujian = ?";
+                + "id_mapel = ?, id_kelas = ?, keterangan = ?, diubah_oleh = ?, kode_guru = ? WHERE id_ujian = ?";
 
         try (Connection connection = getConnection()) {
             connection.setAutoCommit(false);
@@ -358,7 +378,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
                     try (PreparedStatement preparedStatement = connection.prepareStatement(sqlUpdate)) {
                         bindCommonFields(preparedStatement, examSchedule);
-                        preparedStatement.setInt(14, examSchedule.getId());
+                        preparedStatement.setInt(12, examSchedule.getId());
                         preparedStatement.executeUpdate();
                     }
 
@@ -400,25 +420,13 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
             preparedStatement.setNull(8, Types.INTEGER);
         }
 
-        if (examSchedule.getRoom() != null) {
-            preparedStatement.setInt(9, examSchedule.getRoom().getId());
-        } else {
-            preparedStatement.setNull(9, Types.INTEGER);
-        }
-
-        if (examSchedule.getTeacher() != null) {
-            preparedStatement.setInt(10, examSchedule.getTeacher().getId());
-        } else {
-            preparedStatement.setNull(10, Types.INTEGER);
-        }
-
-        preparedStatement.setString(11, examSchedule.getNotes());
-        preparedStatement.setString(12, examSchedule.getUpdatedBy());
+        preparedStatement.setString(9, examSchedule.getNotes());
+        preparedStatement.setString(10, examSchedule.getUpdatedBy());
 
         if (examSchedule.getTeacherCode() != null) {
-            preparedStatement.setInt(13, examSchedule.getTeacherCode());
+            preparedStatement.setInt(11, examSchedule.getTeacherCode());
         } else {
-            preparedStatement.setNull(13, Types.INTEGER);
+            preparedStatement.setNull(11, Types.INTEGER);
         }
     }
 
@@ -451,19 +459,13 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
     }
 
     @Override
-    public boolean hasConflict(LocalDate date, LocalTime startTime, LocalTime endTime, int roomId, int classroomId, int teacherId, int excludeId) {
-        return !findOverlapping(date, startTime, endTime, roomId, classroomId, teacherId, excludeId).isEmpty();
-    }
-
-    // Bentrok kalau: tanggal sama, DAN (ruang ATAU kelas ATAU guru sama),
-    // DAN rentang waktu saling overlap (mulai_baru < selesai_lama DAN selesai_baru > mulai_lama).
-    // Jika query gagal, exception dilempar (tidak lagi dianggap "tidak bentrok").
-    @Override
-    public List<ExamSchedule> findOverlapping(LocalDate date, LocalTime startTime, LocalTime endTime,
-                                              int roomId, int classroomId, int teacherId, int excludeId) {
+    public List<ExamSchedule> findClassOverlaps(LocalDate date, LocalTime startTime, LocalTime endTime,
+                                                int classroomId, int excludeId) {
+        // Bentrok kelas: tanggal sama, kelas sama, dan rentang waktu saling overlap
+        // (mulai_baru < selesai_lama DAN selesai_baru > mulai_lama). Ruangan & pengawas dicek di Penempatan Ruangan.
+        // Jika query gagal, exception dilempar (tidak dianggap "tidak bentrok").
         String sql = SELECT_JOIN
-                + "WHERE ej.tanggal = ? "
-                + "AND (ej.id_ruangan = ? OR ej.id_kelas = ? OR ej.id_guru = ?) "
+                + "WHERE ej.tanggal = ? AND ej.id_kelas = ? "
                 + "AND ej.jam_mulai < ? AND ej.jam_selesai > ? "
                 + "AND ej.id_ujian <> ? ORDER BY ej.jam_mulai";
 
@@ -472,12 +474,10 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             preparedStatement.setObject(1, date);
-            preparedStatement.setInt(2, roomId);
-            preparedStatement.setInt(3, classroomId);
-            preparedStatement.setInt(4, teacherId);
-            preparedStatement.setObject(5, endTime);
-            preparedStatement.setObject(6, startTime);
-            preparedStatement.setInt(7, excludeId);
+            preparedStatement.setInt(2, classroomId);
+            preparedStatement.setObject(3, endTime);
+            preparedStatement.setObject(4, startTime);
+            preparedStatement.setInt(5, excludeId);
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -488,40 +488,6 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
             throw new IllegalStateException("Gagal memeriksa bentrok jadwal: " + exception.getMessage(), exception);
         }
         return result;
-    }
-
-    @Override
-    public List<Room> getAvailableRooms(LocalDate date, LocalTime startTime, LocalTime endTime, int excludeId) {
-        String sql = "SELECT r.id_ruangan, r.kode_ruangan, r.nama_ruangan, r.lantai, r.kapasitas "
-                + "FROM mst_ruangan r WHERE NOT EXISTS ("
-                + "SELECT 1 FROM trx_jadwal ej WHERE ej.id_ruangan = r.id_ruangan AND ej.tanggal = ? "
-                + "AND ej.jam_mulai < ? AND ej.jam_selesai > ? AND ej.id_ujian <> ?) "
-                + "ORDER BY r.nama_ruangan";
-
-        List<Room> rooms = new ArrayList<>();
-        try (Connection connection = getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            preparedStatement.setObject(1, date);
-            preparedStatement.setObject(2, endTime);
-            preparedStatement.setObject(3, startTime);
-            preparedStatement.setInt(4, excludeId);
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    Room room = new Room();
-                    room.setId(resultSet.getInt("id_ruangan"));
-                    room.setCode(resultSet.getString("kode_ruangan"));
-                    room.setName(resultSet.getString("nama_ruangan"));
-                    room.setFloor(resultSet.getInt("lantai"));
-                    room.setCapacity(resultSet.getInt("kapasitas"));
-                    rooms.add(room);
-                }
-            }
-        } catch (Exception exception) {
-            throw new IllegalStateException("Gagal mencari ruangan kosong: " + exception.getMessage(), exception);
-        }
-        return rooms;
     }
 
     // Ringkasan penempatan per jadwal (untuk daftar jadwal). Satu kali panggil untuk satu halaman data.
@@ -548,13 +514,10 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 + "GROUP BY ep.id_ujian, r.id_ruangan, r.kode_ruangan, r.nama_ruangan, ej.tanggal, ej.jam_mulai, ej.jam_selesai "
                 + "ORDER BY ep.id_ujian, r.kode_ruangan, r.nama_ruangan";
 
-        // 2. Jumlah siswa kelas + ruangan/pengawas data lama yang masih tercatat di trx_jadwal
+        // 2. Jumlah siswa kelas
         String sqlSchedule = "SELECT ej.id_ujian, "
-                + "(SELECT COUNT(*) FROM mst_siswa s WHERE s.id_kelas = ej.id_kelas) AS jumlah_siswa, "
-                + "r.kode_ruangan, r.nama_ruangan, g.nama_guru "
+                + "(SELECT COUNT(*) FROM mst_siswa s WHERE s.id_kelas = ej.id_kelas) AS jumlah_siswa "
                 + "FROM trx_jadwal ej "
-                + "LEFT JOIN mst_ruangan r ON r.id_ruangan = ej.id_ruangan "
-                + "LEFT JOIN mst_guru g ON g.id_guru = ej.id_guru "
                 + "WHERE ej.id_ujian IN (" + in + ")";
 
         // 3. Siswa kelas yang belum mendapat kursi pada jadwal tersebut
@@ -581,17 +544,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 bindIds(ps, scheduleIds);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        co.id.model.PlacementSummary summary = result.get(rs.getInt("id_ujian"));
-                        summary.setClassStudentCount(rs.getInt("jumlah_siswa"));
-                        String legacyRoom = rs.getString("nama_ruangan");
-                        String legacyTeacher = rs.getString("nama_guru");
-                        // data lama dipakai hanya bila jadwal belum punya penempatan baru
-                        if (summary.getRooms().isEmpty() && (legacyRoom != null || legacyTeacher != null)) {
-                            summary.setLegacy(true);
-                            summary.getRooms().add(new co.id.model.PlacementSummary.RoomUsage(
-                                    rs.getString("kode_ruangan"), legacyRoom != null ? legacyRoom : "(ruangan belum diisi)",
-                                    0, legacyTeacher));
-                        }
+                        result.get(rs.getInt("id_ujian")).setClassStudentCount(rs.getInt("jumlah_siswa"));
                     }
                 }
             }
@@ -752,26 +705,6 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
             classroom.setName(resultSet.getString("nama_kelas"));
             classroom.setGrade(resultSet.getString("kelas_tingkat"));
             examSchedule.setClassroom(classroom);
-        }
-
-        int roomId = resultSet.getInt("id_ruangan");
-        if (!resultSet.wasNull()) {
-            Room room = new Room();
-            room.setId(roomId);
-            room.setCode(resultSet.getString("kode_ruangan"));
-            room.setName(resultSet.getString("nama_ruangan"));
-            room.setFloor(resultSet.getInt("lantai"));
-            room.setCapacity(resultSet.getInt("kapasitas"));
-            examSchedule.setRoom(room);
-        }
-
-        int teacherId = resultSet.getInt("id_guru");
-        if (!resultSet.wasNull()) {
-            Teacher teacher = new Teacher();
-            teacher.setId(teacherId);
-            teacher.setNip(resultSet.getString("nip"));
-            teacher.setName(resultSet.getString("nama_guru"));
-            examSchedule.setTeacher(teacher);
         }
 
         return examSchedule;

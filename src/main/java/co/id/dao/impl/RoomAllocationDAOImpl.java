@@ -86,10 +86,11 @@ public class RoomAllocationDAOImpl extends DatabaseConfiguration implements Room
     @Override
     public Set<Integer> getBusyRoomIds(LocalDate date, LocalTime start, LocalTime end) {
         String overlap = "AND {t}.jam_mulai < ? AND {t}.jam_selesai > ? AND NOT ({t}.jam_mulai = ? AND {t}.jam_selesai = ?)";
-        String sql = "SELECT DISTINCT ej.id_ruangan AS id FROM trx_jadwal ej WHERE ej.id_ruangan IS NOT NULL AND ej.tanggal = ? "
-                + overlap.replace("{t}", "ej")
-                + " UNION SELECT DISTINCT ep.id_ruangan AS id FROM trx_peserta ep JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
-                + "WHERE ep.id_ruangan IS NOT NULL AND ej.tanggal = ? " + overlap.replace("{t}", "ej");
+        // Ruangan dipakai = ada kursi peserta di sesi lain yang waktunya bertumpuk, atau sudah ada pengawasnya
+        String sql = "SELECT DISTINCT ep.id_ruangan AS id FROM trx_peserta ep JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
+                + "WHERE ep.id_ruangan IS NOT NULL AND ej.tanggal = ? " + overlap.replace("{t}", "ej")
+                + " UNION SELECT DISTINCT pr.id_ruangan AS id FROM trx_pengawas_ruangan pr WHERE pr.tanggal = ? "
+                + overlap.replace("{t}", "pr");
         return queryIds(sql, date, start, end, 2);
     }
 
@@ -97,13 +98,16 @@ public class RoomAllocationDAOImpl extends DatabaseConfiguration implements Room
     @Override
     public Map<Integer, String> getRoomUsages(LocalDate date, LocalTime start, LocalTime end) {
         String overlap = "AND {t}.jam_mulai < ? AND {t}.jam_selesai > ? AND NOT ({t}.jam_mulai = ? AND {t}.jam_selesai = ?)";
-        String sql = "SELECT ej.id_ruangan AS id, COALESCE(k.nama_kelas, '-') AS kelas, ej.jam_mulai, ej.jam_selesai "
-                + "FROM trx_jadwal ej LEFT JOIN mst_kelas k ON k.id_kelas = ej.id_kelas "
-                + "WHERE ej.id_ruangan IS NOT NULL AND ej.tanggal = ? " + overlap.replace("{t}", "ej")
-                + " UNION SELECT ep.id_ruangan AS id, COALESCE(k.nama_kelas, '-') AS kelas, ej.jam_mulai, ej.jam_selesai "
+        String sql = "SELECT ep.id_ruangan AS id, COALESCE(k.nama_kelas, '-') AS kelas, ej.jam_mulai, ej.jam_selesai "
                 + "FROM trx_peserta ep JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
                 + "LEFT JOIN mst_kelas k ON k.id_kelas = ej.id_kelas "
                 + "WHERE ep.id_ruangan IS NOT NULL AND ej.tanggal = ? " + overlap.replace("{t}", "ej")
+                + " UNION SELECT pr.id_ruangan AS id, 'pengawas sudah ditugaskan' AS kelas, pr.jam_mulai, pr.jam_selesai "
+                + "FROM trx_pengawas_ruangan pr "
+                + "WHERE pr.tanggal = ? " + overlap.replace("{t}", "pr")
+                + " AND NOT EXISTS (SELECT 1 FROM trx_peserta ep2 JOIN trx_jadwal ej2 ON ep2.id_ujian = ej2.id_ujian "
+                + "  WHERE ep2.id_ruangan = pr.id_ruangan AND ej2.tanggal = pr.tanggal "
+                + "  AND ej2.jam_mulai = pr.jam_mulai AND ej2.jam_selesai = pr.jam_selesai)"
                 + " ORDER BY id, jam_mulai, jam_selesai, kelas";
 
         // roomId -> (rentang jam -> daftar kelas), lalu dirangkai jadi teks
@@ -142,11 +146,9 @@ public class RoomAllocationDAOImpl extends DatabaseConfiguration implements Room
     @Override
     public Set<Integer> getBusyTeacherIds(LocalDate date, LocalTime start, LocalTime end) {
         String overlap = "AND {t}.jam_mulai < ? AND {t}.jam_selesai > ? AND NOT ({t}.jam_mulai = ? AND {t}.jam_selesai = ?)";
-        String sql = "SELECT DISTINCT ej.id_guru AS id FROM trx_jadwal ej WHERE ej.id_guru IS NOT NULL AND ej.tanggal = ? "
-                + overlap.replace("{t}", "ej")
-                + " UNION SELECT DISTINCT pr.id_guru AS id FROM trx_pengawas_ruangan pr WHERE pr.tanggal = ? "
+        String sql = "SELECT DISTINCT pr.id_guru AS id FROM trx_pengawas_ruangan pr WHERE pr.tanggal = ? "
                 + overlap.replace("{t}", "pr");
-        return queryIds(sql, date, start, end, 2);
+        return queryIds(sql, date, start, end, 1);
     }
 
     // Menjalankan query yang terdiri dari `parts` blok dengan parameter yang sama: tanggal, selesai, mulai, mulai, selesai
@@ -270,16 +272,6 @@ public class RoomAllocationDAOImpl extends DatabaseConfiguration implements Room
                         insert.addBatch();
                     }
                     insert.executeBatch();
-                }
-
-                // 4. ruangan & pengawas tidak lagi diatur per jadwal untuk sesi ini
-                try (PreparedStatement ps = connection.prepareStatement(
-                        "UPDATE trx_jadwal SET id_ruangan = NULL, id_guru = NULL, diubah_oleh = ? WHERE id_ujian IN (" + ids + ")")) {
-                    ps.setString(1, updatedBy);
-                    for (int i = 0; i < scheduleIds.size(); i++) {
-                        ps.setInt(i + 2, scheduleIds.get(i));
-                    }
-                    ps.executeUpdate();
                 }
 
                 connection.commit();

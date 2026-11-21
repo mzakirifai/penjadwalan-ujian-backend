@@ -60,15 +60,6 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
     }
 
     @Override
-    public List<Room> getUsableRooms(ExamSession session) {
-        Set<Integer> busy = roomAllocationDAO.getBusyRoomIds(session.getDate(), session.getStartTime(), session.getEndTime());
-        return masterService.getAllRooms().stream()
-                .filter(r -> r.getCapacity() > 0 && !busy.contains(r.getId()))
-                .sorted(Comparator.comparing(Room::getName, String.CASE_INSENSITIVE_ORDER))
-                .collect(Collectors.toList());
-    }
-
-    @Override
     public List<RoomAvailability> getRoomAvailability(ExamSession session) {
         Map<Integer, String> usages = roomAllocationDAO.getRoomUsages(session.getDate(), session.getStartTime(), session.getEndTime());
         return masterService.getAllRooms().stream()

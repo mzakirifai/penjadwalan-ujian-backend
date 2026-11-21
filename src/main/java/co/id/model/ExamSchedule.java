@@ -21,6 +21,8 @@ public class ExamSchedule {
     // Relasi Many-to-one
     private Subject subject;
     private Classroom classroom;
+    // Ruangan & pengawas BUKAN kolom trx_jadwal lagi: keduanya diatur per sesi di Penempatan Ruangan
+    // (trx_peserta.id_ruangan + trx_pengawas_ruangan). Hanya diisi oleh query tertentu, mis. jadwal mengawas guru.
     private Room room;
     private Teacher teacher;
     private Integer teacherCode; // kode guru pembuat soal, mis. 1 untuk DDPK TKJ (1); boleh kosong

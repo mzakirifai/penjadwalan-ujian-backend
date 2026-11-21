@@ -3,7 +3,6 @@ package co.id.service.impl;
 import co.id.dao.ExamScheduleDAO;
 import co.id.dao.impl.ExamScheduleDAOImpl;
 import co.id.model.ExamSchedule;
-import co.id.model.RoomSuggestion;
 import co.id.model.ScheduleConflict;
 import co.id.service.ScheduleConflictException;
 import co.id.service.ExamScheduleService;
@@ -77,9 +76,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
                 examSchedule.getDate(),
                 examSchedule.getStartTime(),
                 examSchedule.getEndTime(),
-                0,
                 examSchedule.getClassroom().getId(),
-                0,
                 excludeId
         );
 
@@ -88,15 +85,11 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
             for (ScheduleConflict conflict : conflicts) {
                 message.append("\n- ").append(conflict.describe());
             }
-            throw new ScheduleConflictException(message.toString(), conflicts, List.of(), false);
+            throw new ScheduleConflictException(message.toString(), conflicts);
         }
 
         // Tanggal/jam/kelas berubah pada jadwal yang sudah ditempatkan: penempatan lama dikosongkan
         boolean resetPlacement = willResetPlacement(examSchedule);
-        if (resetPlacement) {
-            examSchedule.setRoom(null);
-            examSchedule.setTeacher(null);
-        }
 
         examSchedule.setUpdatedBy(currentUsername);
         examScheduleDAO.saveOrUpdate(examSchedule, resetPlacement);
@@ -143,40 +136,12 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
 
     @Override
     public List<ScheduleConflict> findConflicts(java.time.LocalDate date, java.time.LocalTime startTime,
-            java.time.LocalTime endTime, int roomId, int classroomId, int teacherId, int excludeId) {
+            java.time.LocalTime endTime, int classroomId, int excludeId) {
         List<ScheduleConflict> result = new java.util.ArrayList<>();
-        for (ExamSchedule other : examScheduleDAO.findOverlapping(date, startTime, endTime, roomId, classroomId,
-                teacherId, excludeId)) {
-            if (other.getRoom() != null && other.getRoom().getId() == roomId) {
-                result.add(new ScheduleConflict(ScheduleConflict.Resource.RUANGAN, other));
-            }
-            if (other.getClassroom() != null && other.getClassroom().getId() == classroomId) {
-                result.add(new ScheduleConflict(ScheduleConflict.Resource.KELAS, other));
-            }
-            if (other.getTeacher() != null && other.getTeacher().getId() == teacherId) {
-                result.add(new ScheduleConflict(ScheduleConflict.Resource.PENGAWAS, other));
-            }
+        for (ExamSchedule other : examScheduleDAO.findClassOverlaps(date, startTime, endTime, classroomId, excludeId)) {
+            result.add(new ScheduleConflict(other));
         }
         return result;
-    }
-
-    @Override
-    public List<RoomSuggestion> suggestRooms(java.time.LocalDate date, java.time.LocalTime startTime,
-            java.time.LocalTime endTime, int excludeId, Integer classroomId) {
-        int students = classroomId == null ? 0 : studentDAO.getByClassroom(classroomId).size();
-
-        List<RoomSuggestion> suggestions = new java.util.ArrayList<>();
-        for (co.id.model.Room room : examScheduleDAO.getAvailableRooms(date, startTime, endTime, excludeId)) {
-            suggestions.add(new RoomSuggestion(room, students));
-        }
-
-        // Yang muat didahulukan, mulai dari kapasitas terkecil yang cukup (hemat ruangan besar);
-        // yang tidak muat di belakang, dari yang terbesar.
-        suggestions.sort(java.util.Comparator
-                .comparing((RoomSuggestion s) -> !s.isEnoughCapacity())
-                .thenComparingInt(s -> s.isEnoughCapacity() ? s.getRoom().getCapacity() : -s.getRoom().getCapacity())
-                .thenComparing(s -> s.getRoom().getName()));
-        return suggestions;
     }
 
     @Override
