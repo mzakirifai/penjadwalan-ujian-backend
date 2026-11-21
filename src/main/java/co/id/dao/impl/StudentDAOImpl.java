@@ -314,16 +314,18 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
         }
     }
 
+    // Pengawas di ruangan yang sudah tidak berisi kursi peserta pada sesinya (mis. setelah siswanya dihapus)
+    private static final String DELETE_IDLE_SUPERVISORS = "DELETE FROM trx_pengawas_ruangan WHERE NOT EXISTS ("
+            + "SELECT 1 FROM trx_peserta ep JOIN trx_jadwal ej ON ej.id_ujian = ep.id_ujian "
+            + "WHERE ep.id_ruangan = trx_pengawas_ruangan.id_ruangan AND ej.tanggal = trx_pengawas_ruangan.tanggal "
+            + "AND ej.jam_mulai = trx_pengawas_ruangan.jam_mulai AND ej.jam_selesai = trx_pengawas_ruangan.jam_selesai)";
+
     // Hapus semua siswa dalam satu kelas sekaligus, dalam satu transaksi (berhasil semua atau tidak sama sekali).
     // Data peserta ujian dan nilai milik siswa tersebut ikut terhapus karena foreign key ON DELETE CASCADE;
     // pengawas di ruangan yang jadi kosong (tidak ada kursi lagi pada sesinya) ikut dibersihkan.
     @Override
     public int deleteByClassroom(int classroomId) {
         String sql = "DELETE FROM mst_siswa WHERE id_kelas = ?";
-        String cleanupSupervisors = "DELETE FROM trx_pengawas_ruangan WHERE NOT EXISTS ("
-                + "SELECT 1 FROM trx_peserta ep JOIN trx_jadwal ej ON ej.id_ujian = ep.id_ujian "
-                + "WHERE ep.id_ruangan = trx_pengawas_ruangan.id_ruangan AND ej.tanggal = trx_pengawas_ruangan.tanggal "
-                + "AND ej.jam_mulai = trx_pengawas_ruangan.jam_mulai AND ej.jam_selesai = trx_pengawas_ruangan.jam_selesai)";
 
         try (Connection connection = getConnection()) {
             connection.setAutoCommit(false);
@@ -333,7 +335,7 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                     preparedStatement.setInt(1, classroomId);
                     deleted = preparedStatement.executeUpdate();
                 }
-                try (PreparedStatement preparedStatement = connection.prepareStatement(cleanupSupervisors)) {
+                try (PreparedStatement preparedStatement = connection.prepareStatement(DELETE_IDLE_SUPERVISORS)) {
                     preparedStatement.executeUpdate();
                 }
                 connection.commit();
@@ -370,14 +372,28 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
     }
 
     @Override
+    // Hapus satu siswa. Sama seperti hapus kelompok: kursi & nilainya ikut terhapus (ON DELETE CASCADE),
+    // dan pengawas di ruangan yang jadi kosong ikut dibersihkan, dalam satu transaksi.
     public void delete(int id) {
         String sql = "DELETE FROM mst_siswa WHERE id_siswa = ?";
 
-        try (Connection connection = getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, id);
-
-            preparedStatement.executeUpdate();
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                    preparedStatement.setInt(1, id);
+                    preparedStatement.executeUpdate();
+                }
+                try (PreparedStatement preparedStatement = connection.prepareStatement(DELETE_IDLE_SUPERVISORS)) {
+                    preparedStatement.executeUpdate();
+                }
+                connection.commit();
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
         } catch (Exception exception) {
             throw new IllegalStateException("Gagal menghapus data: " + exception.getMessage(), exception);
         }
