@@ -178,6 +178,10 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
         List<ExamSchedule> schedules = examScheduleDAO.getByPeriod(examType, semester, academicYear);
         List<ExamScheduleReportItem> items = new ArrayList<>();
 
+        // Ruangan & pengawas hasil Penempatan Ruangan (satu jadwal bisa tersebar di beberapa ruangan campur)
+        java.util.Map<Integer, co.id.model.PlacementSummary> placements = examScheduleDAO.getPlacementSummaries(
+                schedules.stream().map(ExamSchedule::getId).collect(java.util.stream.Collectors.toList()));
+
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -189,8 +193,9 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
             item.setEndTime(schedule.getEndTime() != null ? schedule.getEndTime().format(timeFormatter) : "-");
             item.setSubjectName(schedule.getSubject() != null ? schedule.getSubjectLabel() : "-");
             item.setClassroomName(schedule.getClassroom() != null ? schedule.getClassroom().getName() : "-");
-            item.setRoomName(schedule.getRoom() != null ? schedule.getRoom().getName() : "-");
-            item.setTeacherName(schedule.getTeacher() != null ? schedule.getTeacher().getName() : "-");
+            co.id.model.PlacementSummary placement = placements.get(schedule.getId());
+            item.setRoomName(placement != null ? placement.getRoomsLabel() : "-");
+            item.setTeacherName(placement != null ? placement.getSupervisorsLabel() : "-");
 
             items.add(item);
         }
