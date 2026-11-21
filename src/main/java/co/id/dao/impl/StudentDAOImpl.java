@@ -314,6 +314,61 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
         }
     }
 
+    // Hapus semua siswa dalam satu kelas sekaligus, dalam satu transaksi (berhasil semua atau tidak sama sekali).
+    // Data peserta ujian dan nilai milik siswa tersebut ikut terhapus karena foreign key ON DELETE CASCADE;
+    // pengawas di ruangan yang jadi kosong (tidak ada kursi lagi pada sesinya) ikut dibersihkan.
+    @Override
+    public int deleteByClassroom(int classroomId) {
+        String sql = "DELETE FROM mst_siswa WHERE id_kelas = ?";
+        String cleanupSupervisors = "DELETE FROM trx_pengawas_ruangan WHERE NOT EXISTS ("
+                + "SELECT 1 FROM trx_peserta ep JOIN trx_jadwal ej ON ej.id_ujian = ep.id_ujian "
+                + "WHERE ep.id_ruangan = trx_pengawas_ruangan.id_ruangan AND ej.tanggal = trx_pengawas_ruangan.tanggal "
+                + "AND ej.jam_mulai = trx_pengawas_ruangan.jam_mulai AND ej.jam_selesai = trx_pengawas_ruangan.jam_selesai)";
+
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                int deleted;
+                try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                    preparedStatement.setInt(1, classroomId);
+                    deleted = preparedStatement.executeUpdate();
+                }
+                try (PreparedStatement preparedStatement = connection.prepareStatement(cleanupSupervisors)) {
+                    preparedStatement.executeUpdate();
+                }
+                connection.commit();
+                return deleted;
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (Exception exception) {
+            throw new RuntimeException("Hapus siswa per kelas gagal, tidak ada data yang dihapus: " + exception.getMessage(), exception);
+        }
+    }
+
+    // Hitung nilai & kursi peserta ujian milik siswa satu kelas (yang akan ikut terhapus)
+    @Override
+    public int[] countExamDataByClassroom(int classroomId) {
+        String sql = "SELECT "
+                + "(SELECT COUNT(*) FROM trx_nilai n JOIN mst_siswa s ON s.id_siswa = n.id_siswa WHERE s.id_kelas = ?) AS nilai, "
+                + "(SELECT COUNT(*) FROM trx_peserta p JOIN mst_siswa s ON s.id_siswa = p.id_siswa WHERE s.id_kelas = ?) AS peserta";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, classroomId);
+            preparedStatement.setInt(2, classroomId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                resultSet.next();
+                return new int[]{resultSet.getInt("nilai"), resultSet.getInt("peserta")};
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal menghitung data ujian siswa: " + exception.getMessage(), exception);
+        }
+    }
+
     @Override
     public void delete(int id) {
         String sql = "DELETE FROM mst_siswa WHERE id_siswa = ?";

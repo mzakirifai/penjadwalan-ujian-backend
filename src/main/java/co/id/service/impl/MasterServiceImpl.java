@@ -350,6 +350,17 @@ public class MasterServiceImpl implements MasterService{
         studentDAO.delete(id);
     }
 
+    @Override
+    public int deleteStudentsByClassroom(int classroomId, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+        return studentDAO.deleteByClassroom(classroomId);
+    }
+
+    @Override
+    public int[] countStudentExamData(int classroomId) {
+        return studentDAO.countExamDataByClassroom(classroomId);
+    }
+
     // Subject
     @Override
     public List<Subject> getAllSubjects() {
