@@ -19,6 +19,14 @@ public interface ExamScheduleDAO {
     public java.util.Map<java.time.LocalDate, Integer> getExamCountPerDay
         (java.time.LocalDate start, java.time.LocalDate end);
     public void saveOrUpdate(ExamSchedule examSchedule);
+    /** Simpan; jika resetPlacement, kursi/ruangan peserta jadwal ini dikosongkan dalam transaksi yang sama. */
+    public void saveOrUpdate(ExamSchedule examSchedule, boolean resetPlacement);
+    /** True jika jadwal sudah punya penempatan ruangan (kursi peserta atau ruangan/pengawas data lama). */
+    public boolean hasPlacement(int scheduleId);
+    /** Ringkasan penempatan ruangan (ruangan, pengawas, status) untuk daftar jadwal, per id jadwal. */
+    public java.util.Map<Integer, co.id.model.PlacementSummary> getPlacementSummaries(List<Integer> scheduleIds);
+    /** Sesi lain di tanggal tersebut yang jamnya bertumpuk tetapi tidak sama persis dengan rentang ini. */
+    public List<co.id.model.SessionSlot> findMisalignedSessions(LocalDate date, LocalTime startTime, LocalTime endTime, int excludeId);
     public void delete(int id);
     public boolean hasConflict(LocalDate date, LocalTime startTime, LocalTime endTime,
             int roomId, int classroomId, int teacherId, int excludeId);

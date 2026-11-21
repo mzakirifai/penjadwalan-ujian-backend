@@ -262,6 +262,57 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
     @Override
     public void saveOrUpdate(ExamSchedule examSchedule) {
+        saveOrUpdate(examSchedule, false);
+    }
+
+    // Jadwal dianggap sudah ditempatkan bila ada peserta yang sudah punya ruangan,
+    // atau (data lama) ruangan/pengawas masih tercatat langsung di trx_jadwal.
+    @Override
+    public boolean hasPlacement(int scheduleId) {
+        String sql = "SELECT (EXISTS (SELECT 1 FROM trx_peserta WHERE id_ujian = ? AND id_ruangan IS NOT NULL) "
+                + "OR EXISTS (SELECT 1 FROM trx_jadwal WHERE id_ujian = ? AND (id_ruangan IS NOT NULL OR id_guru IS NOT NULL))) AS placed";
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, scheduleId);
+            preparedStatement.setInt(2, scheduleId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                return resultSet.next() && resultSet.getBoolean("placed");
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal memeriksa penempatan ruangan: " + exception.getMessage(), exception);
+        }
+    }
+
+    // Hapus pengawas pada sesi (tanggal + jam) yang ruangannya sudah tidak berisi peserta sama sekali
+    private void removeIdleSupervisors(Connection connection, Object date, Object startTime, Object endTime) throws Exception {
+        String sql = "DELETE FROM trx_pengawas_ruangan WHERE tanggal = ? AND jam_mulai = ? AND jam_selesai = ? "
+                + "AND NOT EXISTS (SELECT 1 FROM trx_peserta ep JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
+                + "WHERE ep.id_ruangan = trx_pengawas_ruangan.id_ruangan AND ej.tanggal = trx_pengawas_ruangan.tanggal "
+                + "AND ej.jam_mulai = trx_pengawas_ruangan.jam_mulai AND ej.jam_selesai = trx_pengawas_ruangan.jam_selesai)";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, date);
+            preparedStatement.setObject(2, startTime);
+            preparedStatement.setObject(3, endTime);
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    // Tanggal + jam lama sebuah jadwal (dibaca sebelum diubah/dihapus); null jika tidak ada
+    private Object[] readSlot(Connection connection, int scheduleId) throws Exception {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(
+                "SELECT tanggal, jam_mulai, jam_selesai FROM trx_jadwal WHERE id_ujian = ?")) {
+            preparedStatement.setInt(1, scheduleId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return new Object[]{resultSet.getDate("tanggal"), resultSet.getTime("jam_mulai"), resultSet.getTime("jam_selesai")};
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void saveOrUpdate(ExamSchedule examSchedule, boolean resetPlacement) {
         String sqlInsert = "INSERT INTO trx_jadwal(jenis_ujian, semester, tahun_akademik, tanggal, jam_mulai, jam_selesai, id_mapel, id_kelas, id_ruangan, id_guru, keterangan, diubah_oleh, kode_guru) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         String sqlUpdate = "UPDATE trx_jadwal SET jenis_ujian = ?, semester = ?, tahun_akademik = ?, tanggal = ?, jam_mulai = ?, jam_selesai = ?, "
@@ -294,10 +345,25 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                         }
                     }
                 } else {
+                    Object[] oldSlot = resetPlacement ? readSlot(connection, examSchedule.getId()) : null;
+                    if (resetPlacement) {
+                        // tanggal/jam/kelas berubah: kursi & ruangan lama tidak berlaku lagi
+                        try (PreparedStatement clearSeats = connection.prepareStatement(
+                                "UPDATE trx_peserta SET id_ruangan = NULL, no_kursi = NULL, diubah_oleh = ? WHERE id_ujian = ?")) {
+                            clearSeats.setString(1, examSchedule.getUpdatedBy());
+                            clearSeats.setInt(2, examSchedule.getId());
+                            clearSeats.executeUpdate();
+                        }
+                    }
+
                     try (PreparedStatement preparedStatement = connection.prepareStatement(sqlUpdate)) {
                         bindCommonFields(preparedStatement, examSchedule);
                         preparedStatement.setInt(14, examSchedule.getId());
                         preparedStatement.executeUpdate();
+                    }
+
+                    if (oldSlot != null) {
+                        removeIdleSupervisors(connection, oldSlot[0], oldSlot[1], oldSlot[2]);
                     }
                 }
 
@@ -360,11 +426,25 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
     public void delete(int id) {
         String sql = "DELETE FROM trx_jadwal WHERE id_ujian = ?";
 
-        try (Connection connection = getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, id);
-
-            preparedStatement.executeUpdate();
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                Object[] oldSlot = readSlot(connection, id);
+                try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                    preparedStatement.setInt(1, id);
+                    preparedStatement.executeUpdate();
+                }
+                // peserta ikut terhapus (cascade); pengawas di ruangan yang jadi kosong ikut dibersihkan
+                if (oldSlot != null) {
+                    removeIdleSupervisors(connection, oldSlot[0], oldSlot[1], oldSlot[2]);
+                }
+                connection.commit();
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
         } catch (Exception exception) {
             throw new IllegalStateException("Gagal menghapus data: " + exception.getMessage(), exception);
         }
@@ -442,6 +522,131 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
             throw new IllegalStateException("Gagal mencari ruangan kosong: " + exception.getMessage(), exception);
         }
         return rooms;
+    }
+
+    // Ringkasan penempatan per jadwal (untuk daftar jadwal). Satu kali panggil untuk satu halaman data.
+    @Override
+    public java.util.Map<Integer, co.id.model.PlacementSummary> getPlacementSummaries(List<Integer> scheduleIds) {
+        java.util.Map<Integer, co.id.model.PlacementSummary> result = new java.util.LinkedHashMap<>();
+        if (scheduleIds == null || scheduleIds.isEmpty()) {
+            return result;
+        }
+        for (Integer id : scheduleIds) {
+            result.put(id, new co.id.model.PlacementSummary(id));
+        }
+        String in = String.join(",", java.util.Collections.nCopies(scheduleIds.size(), "?"));
+
+        // 1. Ruangan hasil Penempatan Ruangan: jumlah siswa per ruangan + pengawas ruangan itu pada sesinya
+        String sqlRooms = "SELECT ep.id_ujian, r.kode_ruangan, r.nama_ruangan, COUNT(*) AS jumlah, "
+                + "(SELECT g.nama_guru FROM trx_pengawas_ruangan pr JOIN mst_guru g ON g.id_guru = pr.id_guru "
+                + " WHERE pr.id_ruangan = r.id_ruangan AND pr.tanggal = ej.tanggal "
+                + " AND pr.jam_mulai = ej.jam_mulai AND pr.jam_selesai = ej.jam_selesai LIMIT 1) AS pengawas "
+                + "FROM trx_peserta ep "
+                + "JOIN trx_jadwal ej ON ej.id_ujian = ep.id_ujian "
+                + "JOIN mst_ruangan r ON r.id_ruangan = ep.id_ruangan "
+                + "WHERE ep.id_ujian IN (" + in + ") "
+                + "GROUP BY ep.id_ujian, r.id_ruangan, r.kode_ruangan, r.nama_ruangan, ej.tanggal, ej.jam_mulai, ej.jam_selesai "
+                + "ORDER BY ep.id_ujian, r.kode_ruangan, r.nama_ruangan";
+
+        // 2. Jumlah siswa kelas + ruangan/pengawas data lama yang masih tercatat di trx_jadwal
+        String sqlSchedule = "SELECT ej.id_ujian, "
+                + "(SELECT COUNT(*) FROM mst_siswa s WHERE s.id_kelas = ej.id_kelas) AS jumlah_siswa, "
+                + "r.kode_ruangan, r.nama_ruangan, g.nama_guru "
+                + "FROM trx_jadwal ej "
+                + "LEFT JOIN mst_ruangan r ON r.id_ruangan = ej.id_ruangan "
+                + "LEFT JOIN mst_guru g ON g.id_guru = ej.id_guru "
+                + "WHERE ej.id_ujian IN (" + in + ")";
+
+        // 3. Siswa kelas yang belum mendapat kursi pada jadwal tersebut
+        String sqlUnplaced = "SELECT ej.id_ujian, COUNT(*) AS belum "
+                + "FROM trx_jadwal ej JOIN mst_siswa s ON s.id_kelas = ej.id_kelas "
+                + "WHERE ej.id_ujian IN (" + in + ") AND NOT EXISTS ("
+                + " SELECT 1 FROM trx_peserta ep WHERE ep.id_ujian = ej.id_ujian "
+                + " AND ep.id_siswa = s.id_siswa AND ep.id_ruangan IS NOT NULL) "
+                + "GROUP BY ej.id_ujian";
+
+        try (Connection connection = getConnection()) {
+            try (PreparedStatement ps = connection.prepareStatement(sqlRooms)) {
+                bindIds(ps, scheduleIds);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        result.get(rs.getInt("id_ujian")).getRooms().add(new co.id.model.PlacementSummary.RoomUsage(
+                                rs.getString("kode_ruangan"), rs.getString("nama_ruangan"),
+                                rs.getInt("jumlah"), rs.getString("pengawas")));
+                    }
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(sqlSchedule)) {
+                bindIds(ps, scheduleIds);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        co.id.model.PlacementSummary summary = result.get(rs.getInt("id_ujian"));
+                        summary.setClassStudentCount(rs.getInt("jumlah_siswa"));
+                        String legacyRoom = rs.getString("nama_ruangan");
+                        String legacyTeacher = rs.getString("nama_guru");
+                        // data lama dipakai hanya bila jadwal belum punya penempatan baru
+                        if (summary.getRooms().isEmpty() && (legacyRoom != null || legacyTeacher != null)) {
+                            summary.setLegacy(true);
+                            summary.getRooms().add(new co.id.model.PlacementSummary.RoomUsage(
+                                    rs.getString("kode_ruangan"), legacyRoom != null ? legacyRoom : "(ruangan belum diisi)",
+                                    0, legacyTeacher));
+                        }
+                    }
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(sqlUnplaced)) {
+                bindIds(ps, scheduleIds);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        result.get(rs.getInt("id_ujian")).setUnplacedCount(rs.getInt("belum"));
+                    }
+                }
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal membaca ringkasan penempatan ruangan: " + exception.getMessage(), exception);
+        }
+        return result;
+    }
+
+    private static void bindIds(PreparedStatement ps, List<Integer> ids) throws Exception {
+        for (int i = 0; i < ids.size(); i++) {
+            ps.setInt(i + 1, ids.get(i));
+        }
+    }
+
+    // Sesi lain pada tanggal yang sama yang jamnya bertumpuk tetapi TIDAK sama persis
+    // (mis. 07:30-09:00 vs 08:00-09:30). Jadwal seperti ini tidak bisa dicampur dalam satu sesi.
+    @Override
+    public List<co.id.model.SessionSlot> findMisalignedSessions(LocalDate date, LocalTime startTime, LocalTime endTime, int excludeId) {
+        String sql = "SELECT jam_mulai, jam_selesai, COUNT(*) AS total FROM trx_jadwal "
+                + "WHERE tanggal = ? AND jam_mulai < ? AND jam_selesai > ? "
+                + "AND NOT (jam_mulai = ? AND jam_selesai = ?) AND id_ujian <> ? "
+                + "GROUP BY jam_mulai, jam_selesai ORDER BY jam_mulai, jam_selesai";
+
+        List<co.id.model.SessionSlot> slots = new ArrayList<>();
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, date);
+            preparedStatement.setObject(2, endTime);
+            preparedStatement.setObject(3, startTime);
+            preparedStatement.setObject(4, startTime);
+            preparedStatement.setObject(5, endTime);
+            preparedStatement.setInt(6, excludeId);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    slots.add(new co.id.model.SessionSlot(
+                            resultSet.getTime("jam_mulai").toLocalTime(),
+                            resultSet.getTime("jam_selesai").toLocalTime(),
+                            resultSet.getInt("total")));
+                }
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal memeriksa sesi ujian: " + exception.getMessage(), exception);
+        }
+        return slots;
     }
 
     @Override

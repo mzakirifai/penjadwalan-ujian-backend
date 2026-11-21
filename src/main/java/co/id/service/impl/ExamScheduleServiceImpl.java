@@ -70,33 +70,75 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         validate(examSchedule);
 
         int excludeId = examSchedule.getId(); // 0 kalau data baru, sehingga tidak bentrok dengan dirinya sendiri
+
+        // Jadwal hanya mengatur "apa & kapan". Ruangan dan pengawas diatur di menu Penempatan Ruangan,
+        // jadi di sini yang diperiksa cukup bentrok KELAS (kelas yang sama pada jam yang bertumpuk).
         List<ScheduleConflict> conflicts = findConflicts(
                 examSchedule.getDate(),
                 examSchedule.getStartTime(),
                 examSchedule.getEndTime(),
-                examSchedule.getRoom() != null ? examSchedule.getRoom().getId() : 0,
+                0,
                 examSchedule.getClassroom().getId(),
-                examSchedule.getTeacher() != null ? examSchedule.getTeacher().getId() : 0,
+                0,
                 excludeId
         );
 
         if (!conflicts.isEmpty()) {
-            boolean hasRoomConflict = conflicts.stream().anyMatch(c -> c.getResource() == ScheduleConflict.Resource.RUANGAN);
-            boolean roomOnly = conflicts.stream().allMatch(c -> c.getResource() == ScheduleConflict.Resource.RUANGAN);
-            List<RoomSuggestion> suggestions = hasRoomConflict
-                    ? suggestRooms(examSchedule.getDate(), examSchedule.getStartTime(), examSchedule.getEndTime(),
-                            excludeId, examSchedule.getClassroom().getId())
-                    : List.of();
-
             StringBuilder message = new StringBuilder("Jadwal bentrok:");
             for (ScheduleConflict conflict : conflicts) {
                 message.append("\n- ").append(conflict.describe());
             }
-            throw new ScheduleConflictException(message.toString(), conflicts, suggestions, roomOnly);
+            throw new ScheduleConflictException(message.toString(), conflicts, List.of(), false);
+        }
+
+        // Tanggal/jam/kelas berubah pada jadwal yang sudah ditempatkan: penempatan lama dikosongkan
+        boolean resetPlacement = willResetPlacement(examSchedule);
+        if (resetPlacement) {
+            examSchedule.setRoom(null);
+            examSchedule.setTeacher(null);
         }
 
         examSchedule.setUpdatedBy(currentUsername);
-        examScheduleDAO.saveOrUpdate(examSchedule);
+        examScheduleDAO.saveOrUpdate(examSchedule, resetPlacement);
+    }
+
+    @Override
+    public boolean willResetPlacement(ExamSchedule examSchedule) {
+        if (examSchedule == null || examSchedule.getId() == 0) {
+            return false;
+        }
+        ExamSchedule existing = examScheduleDAO.getById(examSchedule.getId());
+        if (existing == null) {
+            return false;
+        }
+        boolean changed = !java.util.Objects.equals(existing.getDate(), examSchedule.getDate())
+                || !java.util.Objects.equals(existing.getStartTime(), examSchedule.getStartTime())
+                || !java.util.Objects.equals(existing.getEndTime(), examSchedule.getEndTime())
+                || classroomId(existing) != classroomId(examSchedule);
+        return changed && examScheduleDAO.hasPlacement(examSchedule.getId());
+    }
+
+    @Override
+    public boolean hasPlacement(int scheduleId) {
+        return scheduleId != 0 && examScheduleDAO.hasPlacement(scheduleId);
+    }
+
+    @Override
+    public List<co.id.model.SessionSlot> findMisalignedSessions(java.time.LocalDate date, java.time.LocalTime startTime,
+            java.time.LocalTime endTime, int excludeId) {
+        if (date == null || startTime == null || endTime == null) {
+            return List.of();
+        }
+        return examScheduleDAO.findMisalignedSessions(date, startTime, endTime, excludeId);
+    }
+
+    @Override
+    public java.util.Map<Integer, co.id.model.PlacementSummary> getPlacementSummaries(List<Integer> scheduleIds) {
+        return examScheduleDAO.getPlacementSummaries(scheduleIds);
+    }
+
+    private static int classroomId(ExamSchedule schedule) {
+        return schedule.getClassroom() != null ? schedule.getClassroom().getId() : 0;
     }
 
     @Override

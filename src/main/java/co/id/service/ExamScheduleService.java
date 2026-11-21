@@ -19,6 +19,14 @@ public interface ExamScheduleService {
     public java.util.Map<java.time.LocalDate, Integer> getExamCountPerDay(java.time.LocalDate start, 
             java.time.LocalDate end);
     public void save(ExamSchedule examSchedule, String currentUsername, String currentUserRole);
+    /** True jika menyimpan perubahan ini (tanggal/jam/kelas) akan mengosongkan penempatan ruangan yang sudah ada. */
+    public boolean willResetPlacement(ExamSchedule examSchedule);
+    /** True jika jadwal sudah punya penempatan ruangan. */
+    public boolean hasPlacement(int scheduleId);
+    /** Ringkasan penempatan ruangan (ruangan, pengawas, status) untuk daftar jadwal, per id jadwal. */
+    public java.util.Map<Integer, co.id.model.PlacementSummary> getPlacementSummaries(List<Integer> scheduleIds);
+    /** Sesi lain di tanggal tersebut yang jamnya bertumpuk tetapi tidak sama persis (tidak bisa dicampur). */
+    public List<co.id.model.SessionSlot> findMisalignedSessions(LocalDate date, LocalTime startTime, LocalTime endTime, int excludeId);
     public void delete(int id, String currentUserRole);
     /** Bentrokan (ruangan / kelas / pengawas) untuk rentang waktu ini; kosong jika tidak ada. */
     public List<co.id.model.ScheduleConflict> findConflicts(LocalDate date, LocalTime startTime, LocalTime endTime,
