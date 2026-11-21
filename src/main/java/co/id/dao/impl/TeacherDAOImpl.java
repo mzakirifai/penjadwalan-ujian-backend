@@ -117,6 +117,15 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
         return null;
     }
 
+    // NIP opsional: kosong disimpan sebagai NULL (kolom UNIQUE membolehkan banyak NULL, tapi tidak banyak '')
+    private static void bindNip(PreparedStatement preparedStatement, int index, String nip) throws java.sql.SQLException {
+        if (nip == null || nip.isBlank()) {
+            preparedStatement.setNull(index, java.sql.Types.VARCHAR);
+        } else {
+            preparedStatement.setString(index, nip.trim());
+        }
+    }
+
     @Override
     public void saveOrUpdate(Teacher teacher) {
         String sqlInsert = "INSERT INTO mst_guru(nip, nama_guru, jenis_kelamin, nomor_hp, email, alamat, diubah_oleh) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -125,7 +134,7 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
         try (Connection connection = getConnection()){
             if (teacher.getId() == 0){
                 try (PreparedStatement preparedStatement = connection.prepareStatement(sqlInsert)){
-                    preparedStatement.setString(1, teacher.getNip());
+                    bindNip(preparedStatement, 1, teacher.getNip());
                     preparedStatement.setString(2, teacher.getName());
                     preparedStatement.setString(3, teacher.getGender());
                     preparedStatement.setString(4, teacher.getPhoneNumber());
@@ -137,7 +146,7 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
                 }
             }else{
                 try(PreparedStatement preparedStatement = connection.prepareStatement(sqlUpdate)){
-                    preparedStatement.setString(1, teacher.getNip());
+                    bindNip(preparedStatement, 1, teacher.getNip());
                     preparedStatement.setString(2, teacher.getName());
                     preparedStatement.setString(3, teacher.getGender());
                     preparedStatement.setString(4, teacher.getPhoneNumber());
@@ -165,7 +174,7 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
 
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
                 for (Teacher teacher : teachers) {
-                    preparedStatement.setString(1, teacher.getNip());
+                    bindNip(preparedStatement, 1, teacher.getNip());
                     preparedStatement.setString(2, teacher.getName());
                     preparedStatement.setString(3, teacher.getGender());
                     preparedStatement.setString(4, teacher.getPhoneNumber());

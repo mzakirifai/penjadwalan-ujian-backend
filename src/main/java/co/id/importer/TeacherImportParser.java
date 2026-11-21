@@ -13,13 +13,14 @@ import java.util.Set;
  * Mengubah baris Excel menjadi data Guru + validasi.
  *
  * Kolom Excel: NIP | Nama | Jenis Kelamin | No. HP | Email | Alamat
- * Wajib: NIP, Nama, Jenis Kelamin (kolom jenis_kelamin di database NOT NULL).
+ * Wajib: Nama, Jenis Kelamin (kolom jenis_kelamin di database NOT NULL).
+ * NIP opsional (banyak guru honorer belum punya NIP), tetapi jika diisi harus unik.
  */
 public class TeacherImportParser {
 
     public static final List<String> COLUMNS =
             List.of("NIP", "Nama", "Jenis Kelamin", "No. HP", "Email", "Alamat");
-    public static final List<String> REQUIRED = List.of("nip", "name");
+    public static final List<String> REQUIRED = List.of("name", "gender");
     public static final Map<String, List<String>> ALIASES = new LinkedHashMap<>();
 
     static {
@@ -51,7 +52,7 @@ public class TeacherImportParser {
             String address = row.get("address");
 
             // Lewati baris yang jelas bukan data guru: baris kop/rekap/tanda tangan di bawah tabel
-            // (mis. "Jumlah Guru : 3", "Kepala Sekolah"). Baris dengan nama tapi tanpa NIP tetap ditampilkan sebagai error.
+            // (mis. "Jumlah Guru : 3", "Kepala Sekolah"). Baris dengan nama tapi tanpa NIP tetap diproses (NIP opsional).
             boolean noDigitInNip = !nip.matches(".*\\d.*");
             if ((nip.isEmpty() && name.isEmpty())
                     || (noDigitInNip && row.get("gender").isEmpty() && phone.isEmpty() && email.isEmpty()
@@ -60,9 +61,7 @@ public class TeacherImportParser {
             }
 
             String error = null;
-            if (nip.isEmpty()) {
-                error = "NIP kosong";
-            } else if (nip.matches("^\\d+(\\.\\d+)?[eE][+-]?\\d+$")) {
+            if (!nip.isEmpty() && nip.matches("^\\d+(\\.\\d+)?[eE][+-]?\\d+$")) {
                 error = "NIP terbaca sebagai angka ilmiah, ubah kolom NIP menjadi format Teks";
             } else if (nip.length() > 20) {
                 error = "NIP lebih dari 20 karakter";
@@ -76,14 +75,14 @@ public class TeacherImportParser {
                 error = "No. HP lebih dari 15 karakter";
             } else if (!email.isEmpty() && (email.length() > 100 || !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))) {
                 error = "Format email tidak valid";
-            } else if (existingNip.contains(nip)) {
+            } else if (!nip.isEmpty() && existingNip.contains(nip)) {
                 error = "NIP sudah terdaftar";
-            } else if (!seen.add(nip)) {
+            } else if (!nip.isEmpty() && !seen.add(nip)) {
                 error = "NIP ganda di file";
             }
 
             Teacher teacher = new Teacher();
-            teacher.setNip(nip);
+            teacher.setNip(nip.isEmpty() ? null : nip);
             teacher.setName(name);
             teacher.setGender(gender);
             teacher.setPhoneNumber(phone.isEmpty() ? null : phone);
@@ -91,7 +90,7 @@ public class TeacherImportParser {
             teacher.setAddress(address.isEmpty() ? null : address);
 
             result.add(new ImportItem<>(row.getSheet(), row.getRowNumber(),
-                    List.of(nip, name, gender == null ? "-" : gender, phone, email, address),
+                    List.of(nip.isEmpty() ? "-" : nip, name, gender == null ? "-" : gender, phone, email, address),
                     teacher, error));
         }
         return result;

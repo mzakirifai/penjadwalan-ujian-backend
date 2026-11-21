@@ -69,6 +69,20 @@ public class MasterServiceImpl implements MasterService{
     @Override
     public void saveOrUpdateTeacher(Teacher teacher, String currentUsername, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
+
+        // NIP opsional (banyak guru honorer belum punya NIP), tetapi jika diisi harus unik
+        teacher.setNip(normalizeNip(teacher.getNip()));
+        if (teacher.getName() == null || teacher.getName().isBlank() || teacher.getGender() == null) {
+            throw new IllegalArgumentException("Nama dan Jenis Kelamin wajib diisi.");
+        }
+        if (teacher.getNip() != null) {
+            for (Teacher other : teacherDAO.getAllTeachers()) {
+                if (other.getId() != teacher.getId() && teacher.getNip().equals(normalizeNip(other.getNip()))) {
+                    throw new IllegalArgumentException("NIP " + teacher.getNip() + " sudah dipakai " + other.getName() + ".");
+                }
+            }
+        }
+
         teacher.setUpdatedBy(currentUsername);
         teacherDAO.saveOrUpdate(teacher);
     }
@@ -84,24 +98,33 @@ public class MasterServiceImpl implements MasterService{
         // Validasi ulang di service, jangan hanya mengandalkan pengecekan di layar
         Set<String> seenNip = new HashSet<>();
         for (Teacher existing : teacherDAO.getAllTeachers()) {
-            if (existing.getNip() != null) {
-                seenNip.add(existing.getNip().trim());
+            if (normalizeNip(existing.getNip()) != null) {
+                seenNip.add(normalizeNip(existing.getNip()));
             }
         }
 
         for (Teacher teacher : teachers) {
-            if (teacher.getNip() == null || teacher.getNip().isBlank()
-                    || teacher.getName() == null || teacher.getName().isBlank()
-                    || teacher.getGender() == null) {
-                throw new IllegalArgumentException("NIP, Nama, dan Jenis Kelamin wajib diisi (NIP: " + teacher.getNip() + ").");
+            teacher.setNip(normalizeNip(teacher.getNip()));
+            if (teacher.getName() == null || teacher.getName().isBlank() || teacher.getGender() == null) {
+                throw new IllegalArgumentException("Nama dan Jenis Kelamin wajib diisi (" + teacher.getName() + ").");
             }
-            if (!seenNip.add(teacher.getNip().trim())) {
+            // NIP boleh kosong; yang diisi tidak boleh sama dengan guru lain
+            if (teacher.getNip() != null && !seenNip.add(teacher.getNip())) {
                 throw new IllegalArgumentException("NIP " + teacher.getNip() + " sudah terdaftar.");
             }
             teacher.setUpdatedBy(currentUsername);
         }
 
         return teacherDAO.saveBatch(teachers);
+    }
+
+    // NIP dirapikan: spasi dibuang, kosong menjadi null
+    private static String normalizeNip(String nip) {
+        if (nip == null) {
+            return null;
+        }
+        String cleaned = nip.replaceAll("\\s+", "");
+        return cleaned.isEmpty() ? null : cleaned;
     }
 
     @Override
