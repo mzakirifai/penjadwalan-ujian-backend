@@ -63,6 +63,7 @@ public interface MasterService {
     public Subject getByIdSubject(int id);
     public void saveOrUpdateSubject(Subject subject, String currentUsername, String currentUserRole);
     public void deleteSubject(int id, String currentUserRole);
+    public int importSubjects(List<Subject> subjects, String currentUsername, String currentUserRole);
     
     // Room
     public List<Room> getAllRooms();

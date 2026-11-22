@@ -177,17 +177,8 @@ public class SubjectDAOImpl extends DatabaseConfiguration implements SubjectDAO{
                     try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
                         if (generatedKeys.next()) {
                             int newId = generatedKeys.getInt(1);
-                            String generatedCode = "M" + String.format("%02d", newId);
-
-                            try (PreparedStatement updateCode = connection.prepareStatement(
-                                    "UPDATE mst_mapel SET kode_mapel = ? WHERE id_mapel = ?")) {
-                                updateCode.setString(1, generatedCode);
-                                updateCode.setInt(2, newId);
-                                updateCode.executeUpdate();
-                            }
-
                             subject.setId(newId);
-                            subject.setCode(generatedCode);
+                            subject.setCode(assignGeneratedCode(connection, newId));
                         }
                     }
                 }
@@ -252,6 +243,87 @@ public class SubjectDAOImpl extends DatabaseConfiguration implements SubjectDAO{
         subject.setUpdatedBy(resultSet.getString("diubah_oleh"));
 
         return subject;
+    }
+
+    @Override
+    public int saveBatch(List<Subject> subjects) {
+        String sql = "INSERT INTO mst_mapel(kode_mapel, nama_mapel, id_jurusan, tingkat, jenis, kkm, diubah_oleh) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                // Mapel berkode dari file disimpan dulu, supaya kode otomatis untuk baris tanpa kode tidak bentrok
+                List<Subject> ordered = new ArrayList<>();
+                subjects.stream().filter(s -> s.getCode() != null).forEach(ordered::add);
+                subjects.stream().filter(s -> s.getCode() == null).forEach(ordered::add);
+
+                for (Subject subject : ordered) {
+                    preparedStatement.setString(1, subject.getCode());
+                    preparedStatement.setString(2, subject.getName());
+                    if (subject.getMajor() != null) {
+                        preparedStatement.setInt(3, subject.getMajor().getId());
+                    } else {
+                        preparedStatement.setNull(3, Types.INTEGER);
+                    }
+                    preparedStatement.setString(4, subject.getGrade());
+                    preparedStatement.setString(5, subject.getType());
+                    preparedStatement.setInt(6, subject.getPassingGrade());
+                    preparedStatement.setString(7, subject.getUpdatedBy());
+                    preparedStatement.executeUpdate();
+
+                    try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
+                        if (generatedKeys.next()) {
+                            subject.setId(generatedKeys.getInt(1));
+                            if (subject.getCode() == null) {
+                                subject.setCode(assignGeneratedCode(connection, subject.getId()));
+                            }
+                        }
+                    }
+                }
+
+                connection.commit();
+                return subjects.size();
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Import mapel gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
+        }
+    }
+
+    /**
+     * Kode otomatis "M" + id (mis. M07). Karena kode juga bisa diisi sendiri lewat import Excel,
+     * kode itu bisa sudah terpakai; bila begitu dipakai akhiran -2, -3, dan seterusnya.
+     */
+    private static String assignGeneratedCode(Connection connection, int id) throws Exception {
+        String base = "M" + String.format("%02d", id);
+        String code = base;
+        try (PreparedStatement check = connection.prepareStatement(
+                "SELECT COUNT(*) FROM mst_mapel WHERE kode_mapel = ? AND id_mapel <> ?")) {
+            for (int n = 2; ; n++) {
+                check.setString(1, code);
+                check.setInt(2, id);
+                try (ResultSet rs = check.executeQuery()) {
+                    rs.next();
+                    if (rs.getInt(1) == 0) {
+                        break;
+                    }
+                }
+                code = base + "-" + n;
+            }
+        }
+        try (PreparedStatement updateCode = connection.prepareStatement(
+                "UPDATE mst_mapel SET kode_mapel = ? WHERE id_mapel = ?")) {
+            updateCode.setString(1, code);
+            updateCode.setInt(2, id);
+            updateCode.executeUpdate();
+        }
+        return code;
     }
 
     // Helper method untuk mapping ResultSet ke object Subject (lengkap dengan data Major)

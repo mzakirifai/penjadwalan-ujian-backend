@@ -412,6 +412,48 @@ public class MasterServiceImpl implements MasterService{
                 "Mapel ini tidak bisa dihapus karena masih dipakai di jadwal ujian. Hapus atau ubah jadwal ujiannya terlebih dahulu.");
     }
 
+    @Override
+    public int importSubjects(List<Subject> subjects, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+
+        if (subjects == null || subjects.isEmpty()) {
+            return 0;
+        }
+
+        // Validasi ulang di service, jangan hanya mengandalkan pengecekan di layar (aturan sama dengan form Mapel)
+        Set<String> usedCodes = new HashSet<>();
+        for (Subject existing : subjectDAO.getAllSubjects()) {
+            if (existing.getCode() != null) {
+                usedCodes.add(existing.getCode().trim().toUpperCase());
+            }
+        }
+
+        for (Subject subject : subjects) {
+            String label = subject.getName();
+            if (subject.getName() == null || subject.getName().isBlank()) {
+                throw new IllegalArgumentException("Nama Mapel wajib diisi.");
+            }
+            if (!"Umum".equals(subject.getType()) && !"Kejuruan".equals(subject.getType())) {
+                throw new IllegalArgumentException("Jenis mapel harus Umum atau Kejuruan (" + label + ").");
+            }
+            if ("Kejuruan".equals(subject.getType()) && subject.getMajor() == null) {
+                throw new IllegalArgumentException("Jurusan wajib diisi untuk mapel Kejuruan (" + label + ").");
+            }
+            if ("Umum".equals(subject.getType()) && subject.getMajor() != null) {
+                throw new IllegalArgumentException("Mapel Umum tidak boleh punya jurusan (" + label + ").");
+            }
+            if (subject.getPassingGrade() < 0 || subject.getPassingGrade() > 100) {
+                throw new IllegalArgumentException("KKM harus di antara 0 - 100 (" + label + ").");
+            }
+            if (subject.getCode() != null && !usedCodes.add(subject.getCode().trim().toUpperCase())) {
+                throw new IllegalArgumentException("Kode Mapel " + subject.getCode() + " sudah terdaftar.");
+            }
+            subject.setUpdatedBy(currentUsername);
+        }
+
+        return subjectDAO.saveBatch(subjects);
+    }
+
     // Room
     @Override
     public List<Room> getAllRooms() {

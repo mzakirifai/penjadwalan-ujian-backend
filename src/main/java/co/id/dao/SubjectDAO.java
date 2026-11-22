@@ -11,4 +11,6 @@ public interface SubjectDAO {
     public Subject getById(int id);
     public void saveOrUpdate(Subject subject);
     public void delete(int id);
+    /** Simpan banyak mapel dalam satu transaksi (semua tersimpan atau tidak sama sekali). Kode kosong dibuat otomatis. */
+    public int saveBatch(List<Subject> subjects);
 }
