@@ -1,6 +1,5 @@
 package co.id.service;
 
-import co.id.model.ExamParticipant;
 import co.id.model.ExamScore;
 import co.id.model.RoomPlan;
 import co.id.model.Room;
@@ -31,7 +30,6 @@ public interface ReportService {
     public List<ExamScore> getExamResultReport(int examScheduleId);
     public List<ClassScoreRecapItem> getClassScoreRecapReport(int classroomId, 
             String examType, String semester, String academicYear);
-    public List<ExamParticipant> getAttendanceListReport(int examScheduleId);
     /**
      * Daftar hadir per ruangan dari penempatan yang sudah tersimpan untuk satu sesi.
      * roomId null = semua ruangan di sesi itu (tiap ruangan dicetak di halaman baru).

@@ -330,7 +330,6 @@ CREATE TABLE `users` (
   `full_name` varchar(255) DEFAULT NULL,
   `role` enum('admin','guru') NOT NULL,
   `id_guru` int(11) DEFAULT NULL,
-  `photo_path` varchar(255) DEFAULT NULL,
   `photo_data` mediumblob DEFAULT NULL,
   `tanggal_buat` timestamp NOT NULL DEFAULT current_timestamp(),
   `tanggal_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),

@@ -1,14 +1,12 @@
 package co.id.dao.impl;
 
 import co.id.config.DatabaseConfiguration;
-import co.id.dao.ExamParticipantDAO;
 import co.id.dao.ExamScheduleDAO;
 import co.id.dao.ExamScoreDAO;
 import co.id.dao.ReportDAO;
 import co.id.dao.RoomDAO;
 import co.id.dao.StudentDAO;
 import co.id.dao.TeacherDAO;
-import co.id.model.ExamParticipant;
 import co.id.model.ExamSchedule;
 import co.id.model.ExamScore;
 import co.id.model.Major;
@@ -34,7 +32,6 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     private final TeacherDAO teacherDAO;
     private final StudentDAO studentDAO;
     private final ExamScheduleDAO examScheduleDAO;
-    private final ExamParticipantDAO examParticipantDAO;
     private final ExamScoreDAO examScoreDAO;
 
     public ReportDAOImpl() {
@@ -42,7 +39,6 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
         teacherDAO = new TeacherDAOImpl();
         studentDAO = new StudentDAOImpl();
         examScheduleDAO = new ExamScheduleDAOImpl();
-        examParticipantDAO = new ExamParticipantDAOImpl();
         examScoreDAO = new ExamScoreDAOImpl();
         
     }
@@ -328,10 +324,5 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
         }
  
         return items;
-    }
-    
-    @Override
-    public List<ExamParticipant> getAttendanceListReport(int examScheduleId) {
-        return examParticipantDAO.getByExamSchedule(examScheduleId);
     }
 }
