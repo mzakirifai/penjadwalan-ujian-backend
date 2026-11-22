@@ -1,8 +1,8 @@
--- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)
+-- MariaDB dump 10.19  Distrib 10.11.14-MariaDB, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: penjadwalan_ujian_db
 -- ------------------------------------------------------
--- Server version	10.4.32-MariaDB
+-- Server version	10.11.14-MariaDB-0ubuntu0.24.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -21,10 +21,10 @@
 
 DROP TABLE IF EXISTS `mst_guru`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `mst_guru` (
   `id_guru` int(11) NOT NULL AUTO_INCREMENT,
-  `nip` varchar(20) NOT NULL,
+  `nip` varchar(20) DEFAULT NULL,
   `nama_guru` varchar(100) NOT NULL,
   `jenis_kelamin` enum('Laki-laki','Perempuan') NOT NULL,
   `nomor_hp` varchar(15) DEFAULT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE `mst_guru` (
   `diubah_oleh` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id_guru`),
   UNIQUE KEY `nip` (`nip`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -44,7 +44,7 @@ CREATE TABLE `mst_guru` (
 
 DROP TABLE IF EXISTS `mst_jurusan`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `mst_jurusan` (
   `id_jurusan` int(11) NOT NULL AUTO_INCREMENT,
   `kode_jurusan` varchar(10) DEFAULT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE `mst_jurusan` (
   `diubah_oleh` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id_jurusan`),
   UNIQUE KEY `kode_jurusan` (`kode_jurusan`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -64,7 +64,7 @@ CREATE TABLE `mst_jurusan` (
 
 DROP TABLE IF EXISTS `mst_kelas`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `mst_kelas` (
   `id_kelas` int(11) NOT NULL AUTO_INCREMENT,
   `kode_kelas` varchar(10) DEFAULT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE `mst_kelas` (
   UNIQUE KEY `kode_kelas` (`kode_kelas`),
   KEY `id_jurusan` (`id_jurusan`),
   CONSTRAINT `mst_kelas_ibfk_1` FOREIGN KEY (`id_jurusan`) REFERENCES `mst_jurusan` (`id_jurusan`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -87,7 +87,7 @@ CREATE TABLE `mst_kelas` (
 
 DROP TABLE IF EXISTS `mst_mapel`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `mst_mapel` (
   `id_mapel` int(11) NOT NULL AUTO_INCREMENT,
   `kode_mapel` varchar(10) DEFAULT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE `mst_mapel` (
   UNIQUE KEY `kode_mapel` (`kode_mapel`),
   KEY `id_jurusan` (`id_jurusan`),
   CONSTRAINT `mst_mapel_ibfk_1` FOREIGN KEY (`id_jurusan`) REFERENCES `mst_jurusan` (`id_jurusan`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -112,7 +112,7 @@ CREATE TABLE `mst_mapel` (
 
 DROP TABLE IF EXISTS `mst_pengampu`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `mst_pengampu` (
   `id_pengampu` int(11) NOT NULL AUTO_INCREMENT,
   `id_guru` int(11) NOT NULL,
@@ -130,7 +130,7 @@ CREATE TABLE `mst_pengampu` (
   CONSTRAINT `mst_pengampu_ibfk_1` FOREIGN KEY (`id_guru`) REFERENCES `mst_guru` (`id_guru`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `mst_pengampu_ibfk_2` FOREIGN KEY (`id_mapel`) REFERENCES `mst_mapel` (`id_mapel`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `mst_pengampu_ibfk_3` FOREIGN KEY (`id_kelas`) REFERENCES `mst_kelas` (`id_kelas`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -139,7 +139,7 @@ CREATE TABLE `mst_pengampu` (
 
 DROP TABLE IF EXISTS `mst_ruangan`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `mst_ruangan` (
   `id_ruangan` int(11) NOT NULL AUTO_INCREMENT,
   `kode_ruangan` varchar(10) DEFAULT NULL,
@@ -151,7 +151,7 @@ CREATE TABLE `mst_ruangan` (
   `diubah_oleh` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id_ruangan`),
   UNIQUE KEY `kode_ruangan` (`kode_ruangan`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -160,7 +160,7 @@ CREATE TABLE `mst_ruangan` (
 
 DROP TABLE IF EXISTS `mst_siswa`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `mst_siswa` (
   `id_siswa` int(11) NOT NULL AUTO_INCREMENT,
   `nis` varchar(20) NOT NULL,
@@ -176,7 +176,7 @@ CREATE TABLE `mst_siswa` (
   UNIQUE KEY `uq_mst_siswa_nisn` (`nisn`),
   KEY `id_kelas` (`id_kelas`),
   CONSTRAINT `mst_siswa_ibfk_1` FOREIGN KEY (`id_kelas`) REFERENCES `mst_kelas` (`id_kelas`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=379 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -185,7 +185,7 @@ CREATE TABLE `mst_siswa` (
 
 DROP TABLE IF EXISTS `pengaturan`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `pengaturan` (
   `id` int(11) NOT NULL,
   `nama_sekolah` varchar(150) NOT NULL,
@@ -208,7 +208,7 @@ CREATE TABLE `pengaturan` (
 
 DROP TABLE IF EXISTS `trx_jadwal`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `trx_jadwal` (
   `id_ujian` int(11) NOT NULL AUTO_INCREMENT,
   `kode_ujian` varchar(10) DEFAULT NULL,
@@ -220,8 +220,7 @@ CREATE TABLE `trx_jadwal` (
   `jam_selesai` time NOT NULL,
   `id_mapel` int(11) DEFAULT NULL,
   `id_kelas` int(11) DEFAULT NULL,
-  `id_ruangan` int(11) DEFAULT NULL,
-  `id_guru` int(11) DEFAULT NULL,
+  `kode_guru` int(11) DEFAULT NULL,
   `keterangan` text DEFAULT NULL,
   `tanggal_buat` timestamp NOT NULL DEFAULT current_timestamp(),
   `tanggal_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -229,14 +228,10 @@ CREATE TABLE `trx_jadwal` (
   PRIMARY KEY (`id_ujian`),
   UNIQUE KEY `kode_ujian` (`kode_ujian`),
   KEY `id_mapel` (`id_mapel`),
-  KEY `id_kelas` (`id_kelas`),
-  KEY `id_ruangan` (`id_ruangan`),
-  KEY `id_guru` (`id_guru`),
-  CONSTRAINT `trx_jadwal_ibfk_1` FOREIGN KEY (`id_mapel`) REFERENCES `mst_mapel` (`id_mapel`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `trx_jadwal_ibfk_2` FOREIGN KEY (`id_kelas`) REFERENCES `mst_kelas` (`id_kelas`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `trx_jadwal_ibfk_3` FOREIGN KEY (`id_ruangan`) REFERENCES `mst_ruangan` (`id_ruangan`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `trx_jadwal_ibfk_4` FOREIGN KEY (`id_guru`) REFERENCES `mst_guru` (`id_guru`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  KEY `idx_jadwal_kelas_mapel_kode` (`id_kelas`,`id_mapel`,`kode_guru`),
+  CONSTRAINT `trx_jadwal_ibfk_1` FOREIGN KEY (`id_mapel`) REFERENCES `mst_mapel` (`id_mapel`) ON UPDATE CASCADE,
+  CONSTRAINT `trx_jadwal_ibfk_2` FOREIGN KEY (`id_kelas`) REFERENCES `mst_kelas` (`id_kelas`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -245,7 +240,7 @@ CREATE TABLE `trx_jadwal` (
 
 DROP TABLE IF EXISTS `trx_nilai`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `trx_nilai` (
   `id_nilai` int(11) NOT NULL AUTO_INCREMENT,
   `kode_nilai` varchar(35) DEFAULT NULL,
@@ -261,7 +256,33 @@ CREATE TABLE `trx_nilai` (
   KEY `id_siswa` (`id_siswa`),
   CONSTRAINT `trx_nilai_ibfk_1` FOREIGN KEY (`id_ujian`) REFERENCES `trx_jadwal` (`id_ujian`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `trx_nilai_ibfk_2` FOREIGN KEY (`id_siswa`) REFERENCES `mst_siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `trx_pengawas_ruangan`
+--
+
+DROP TABLE IF EXISTS `trx_pengawas_ruangan`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `trx_pengawas_ruangan` (
+  `id_pengawas` int(11) NOT NULL AUTO_INCREMENT,
+  `tanggal` date NOT NULL,
+  `jam_mulai` time NOT NULL,
+  `jam_selesai` time NOT NULL,
+  `id_ruangan` int(11) NOT NULL,
+  `id_guru` int(11) NOT NULL,
+  `tanggal_buat` timestamp NOT NULL DEFAULT current_timestamp(),
+  `tanggal_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `diubah_oleh` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id_pengawas`),
+  UNIQUE KEY `uniq_sesi_ruangan` (`tanggal`,`jam_mulai`,`jam_selesai`,`id_ruangan`),
+  KEY `idx_pengawas_guru` (`id_guru`,`tanggal`),
+  KEY `id_ruangan` (`id_ruangan`),
+  CONSTRAINT `trx_pengawas_ruangan_ibfk_1` FOREIGN KEY (`id_ruangan`) REFERENCES `mst_ruangan` (`id_ruangan`) ON UPDATE CASCADE,
+  CONSTRAINT `trx_pengawas_ruangan_ibfk_2` FOREIGN KEY (`id_guru`) REFERENCES `mst_guru` (`id_guru`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -270,12 +291,13 @@ CREATE TABLE `trx_nilai` (
 
 DROP TABLE IF EXISTS `trx_peserta`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `trx_peserta` (
   `id_peserta` int(11) NOT NULL AUTO_INCREMENT,
   `kode_peserta` varchar(35) DEFAULT NULL,
   `id_ujian` int(11) DEFAULT NULL,
   `id_siswa` int(11) DEFAULT NULL,
+  `id_ruangan` int(11) DEFAULT NULL,
   `no_peserta` varchar(20) DEFAULT NULL,
   `no_kursi` varchar(10) DEFAULT NULL,
   `tanggal_buat` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -283,12 +305,14 @@ CREATE TABLE `trx_peserta` (
   `diubah_oleh` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id_peserta`),
   UNIQUE KEY `kode_peserta` (`kode_peserta`),
-  UNIQUE KEY `uniq_ujian_kursi` (`id_ujian`,`no_kursi`),
   UNIQUE KEY `uniq_ujian_peserta` (`id_ujian`,`no_peserta`),
+  UNIQUE KEY `uniq_ujian_ruangan_kursi` (`id_ujian`,`id_ruangan`,`no_kursi`),
   KEY `id_siswa` (`id_siswa`),
+  KEY `trx_peserta_ibfk_3` (`id_ruangan`),
   CONSTRAINT `trx_peserta_ibfk_1` FOREIGN KEY (`id_ujian`) REFERENCES `trx_jadwal` (`id_ujian`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `trx_peserta_ibfk_2` FOREIGN KEY (`id_siswa`) REFERENCES `mst_siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=64 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  CONSTRAINT `trx_peserta_ibfk_2` FOREIGN KEY (`id_siswa`) REFERENCES `mst_siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `trx_peserta_ibfk_3` FOREIGN KEY (`id_ruangan`) REFERENCES `mst_ruangan` (`id_ruangan`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -297,7 +321,7 @@ CREATE TABLE `trx_peserta` (
 
 DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `users` (
   `user_id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
@@ -313,14 +337,10 @@ CREATE TABLE `users` (
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `id_guru` (`id_guru`),
-  CONSTRAINT `users_ibfk_1` FOREIGN KEY (`id_guru`) REFERENCES `mst_guru` (`id_guru`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `CONSTRAINT_1` CHECK (`role` = 'admin' and `id_guru` is null or `role` = 'guru' and `id_guru` is not null)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  CONSTRAINT `users_ibfk_1` FOREIGN KEY (`id_guru`) REFERENCES `mst_guru` (`id_guru`),
+  CONSTRAINT `chk_users_role_guru` CHECK (`role` = 'admin' and `id_guru` is null or `role` = 'guru' and `id_guru` is not null)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping routines for database 'penjadwalan_ujian_db'
---
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -331,4 +351,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-18  9:10:55
+-- Dump completed

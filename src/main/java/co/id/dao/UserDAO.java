@@ -15,4 +15,6 @@ public interface UserDAO {
     public void delete(int id);
     public boolean isUsernameTaken(String username, int excludeId);
     public boolean isTeacherLinked(int teacherId, int excludeId);
+    /** Akun login yang terhubung ke guru ini, atau null bila tidak ada. */
+    public User getByTeacherId(int teacherId);
 }

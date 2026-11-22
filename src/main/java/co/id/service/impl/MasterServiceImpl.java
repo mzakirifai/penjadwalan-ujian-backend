@@ -3,18 +3,21 @@ package co.id.service.impl;
 import co.id.dao.ClassroomDAO;
 import co.id.dao.MajorDAO;
 import co.id.dao.RoomDAO;
+import co.id.dao.UserDAO;
 import co.id.dao.StudentDAO;
 import co.id.dao.SubjectDAO;
 import co.id.dao.TeacherDAO;
 import co.id.dao.impl.ClassroomDAOImpl;
 import co.id.dao.impl.MajorDAOImpl;
 import co.id.dao.impl.RoomDAOImpl;
+import co.id.dao.impl.UserDAOImpl;
 import co.id.dao.impl.StudentDAOImpl;
 import co.id.dao.impl.SubjectDAOImpl;
 import co.id.dao.impl.TeacherDAOImpl;
 import co.id.model.Classroom;
 import co.id.model.Major;
 import co.id.model.Room;
+import co.id.model.User;
 import co.id.model.SessionOccupancy;
 import co.id.model.Student;
 import co.id.model.Subject;
@@ -31,6 +34,7 @@ public class MasterServiceImpl implements MasterService{
     private final StudentDAO studentDAO;
     private final SubjectDAO subjectDAO;
     private final RoomDAO roomDAO;
+    private final UserDAO userDAO;
 
     public MasterServiceImpl() {
         teacherDAO = new TeacherDAOImpl();
@@ -39,6 +43,7 @@ public class MasterServiceImpl implements MasterService{
         studentDAO = new StudentDAOImpl();
         subjectDAO = new SubjectDAOImpl();
         roomDAO = new RoomDAOImpl();
+        userDAO = new UserDAOImpl();
     }
 
     // Teacher
@@ -146,6 +151,11 @@ public class MasterServiceImpl implements MasterService{
     @Override
     public void deleteTeacher(int id, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
+        User account = userDAO.getByTeacherId(id);
+        if (account != null) {
+            throw new IllegalStateException("Guru ini tidak bisa dihapus karena masih terhubung dengan akun login \""
+                    + account.getUsername() + "\". Hapus akun tersebut terlebih dahulu di menu User Management.");
+        }
         deleteSafely(() -> teacherDAO.delete(id),
                 "Guru ini tidak bisa dihapus karena masih menjadi pengawas di Penempatan Ruangan. Ganti pengawasnya terlebih dahulu.");
     }

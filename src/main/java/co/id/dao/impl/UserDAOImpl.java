@@ -122,6 +122,28 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
     }
 
     @Override
+    public User getByTeacherId(int teacherId) {
+        String sql = SELECT_JOIN + "WHERE u.id_guru = ?";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, teacherId);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return mapResultSetToUser(resultSet);
+                }
+            }
+        } catch (Exception exception) {
+            // dipakai sebagai pengecekan sebelum hapus guru, jadi kegagalan tidak boleh dianggap "tidak ada akun"
+            throw new IllegalStateException("Gagal memeriksa akun guru: " + exception.getMessage(), exception);
+        }
+
+        return null;
+    }
+
+    @Override
     public List<User> getByKeyword(String keyword) {
         List<User> users = new ArrayList<>();
         String sql = SELECT_JOIN + "WHERE u.username LIKE ? OR u.full_name LIKE ? OR g.nama_guru LIKE ?";
