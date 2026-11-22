@@ -18,7 +18,8 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
     private static final String SELECT_JOIN =
         "SELECT ep.*, "
         + "ej.kode_ujian, ej.kode_guru, ej.jenis_ujian, ej.tanggal, ej.jam_mulai, ej.jam_selesai, "
-        + "s.nis, s.nama_siswa, pr.nama_ruangan AS nama_ruangan_peserta "
+        + "s.nis, s.nama_siswa, s.status_administrasi, s.keterangan_administrasi, "
+        + "pr.nama_ruangan AS nama_ruangan_peserta "
         + "FROM trx_peserta ep "
         + "LEFT JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
         + "LEFT JOIN mst_siswa s ON ep.id_siswa = s.id_siswa "
@@ -378,6 +379,8 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
             student.setId(studentId);
             student.setNis(resultSet.getString("nis"));
             student.setName(resultSet.getString("nama_siswa"));
+            student.setAdminStatus(resultSet.getString("status_administrasi"));
+            student.setAdminNote(resultSet.getString("keterangan_administrasi"));
             examParticipant.setStudent(student);
         }
 
