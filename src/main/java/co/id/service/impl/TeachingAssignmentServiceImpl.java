@@ -2,11 +2,14 @@ package co.id.service.impl;
 
 import co.id.dao.TeachingAssignmentDAO;
 import co.id.dao.impl.TeachingAssignmentDAOImpl;
+import co.id.importer.TeachingAssignmentImportParser;
 import co.id.model.TeachingAssignment;
 import co.id.service.TeachingAssignmentService;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class TeachingAssignmentServiceImpl implements TeachingAssignmentService {
@@ -115,6 +118,49 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
         }
 
         return teachingAssignmentDAO.saveAll(toInsert);
+    }
+
+    @Override
+    public int importTeachingAssignments(List<TeachingAssignment> teachingAssignments, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+
+        if (teachingAssignments == null || teachingAssignments.isEmpty()) {
+            return 0;
+        }
+
+        // Validasi ulang di service, jangan hanya mengandalkan pengecekan di layar pratinjau
+        Set<String> seen = new HashSet<>();
+        Map<String, Integer> codeOwners = new HashMap<>();
+        for (TeachingAssignment ta : teachingAssignments) {
+            if (ta.getTeacher() == null || ta.getSubject() == null || ta.getClassroom() == null) {
+                throw new IllegalArgumentException("Guru, mapel, dan kelas wajib diisi.");
+            }
+            int teacherId = ta.getTeacher().getId();
+            int subjectId = ta.getSubject().getId();
+            int classroomId = ta.getClassroom().getId();
+            String label = ta.getTeacher().getName() + " - " + ta.getSubject().getName() + " - " + ta.getClassroom().getName();
+
+            if (!TeachingAssignmentImportParser.isSubjectApplicable(ta.getSubject(), ta.getClassroom())) {
+                throw new IllegalArgumentException("Mapel tidak berlaku untuk kelasnya (" + label + ").");
+            }
+            validateCode(ta);
+            if (ta.getTeacherCode() != null) {
+                Integer owner = codeOwners.putIfAbsent(subjectId + "#" + ta.getTeacherCode(), teacherId);
+                if (owner != null && owner != teacherId) {
+                    throw new IllegalStateException("Kode " + ta.getTeacherCode() + " pada mapel \"" + ta.getSubject().getName()
+                            + "\" dipakai lebih dari satu guru di file.");
+                }
+            }
+            if (!seen.add(teacherId + "-" + subjectId + "-" + classroomId)
+                    || teachingAssignmentDAO.isAssigned(teacherId, subjectId, classroomId)) {
+                throw new IllegalStateException("Pengampu sudah terdaftar atau ganda (" + label + ").");
+            }
+
+            ta.setId(0);
+            ta.setUpdatedBy(currentUsername);
+        }
+
+        return teachingAssignmentDAO.saveAll(teachingAssignments);
     }
 
     @Override

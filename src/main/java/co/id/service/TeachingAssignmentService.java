@@ -22,5 +22,7 @@ public interface TeachingAssignmentService {
      */
     public int saveAll(List<TeachingAssignment> teachingAssignments, String currentUsername, String currentUserRole);
     public void delete(int id, String currentUserRole);
+    /** Import dari Excel: semua baris tersimpan dalam satu transaksi, atau tidak sama sekali. */
+    public int importTeachingAssignments(List<TeachingAssignment> teachingAssignments, String currentUsername, String currentUserRole);
     public boolean isAssigned(int teacherId, int subjectId, int classroomId);
 }
