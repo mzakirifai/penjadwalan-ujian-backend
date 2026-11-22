@@ -49,7 +49,7 @@ public class TeachingAssignmentImportParser {
         Map<String, Teacher> teachersByNip = new HashMap<>();
         for (Teacher t : teachers) {
             teachersByName.computeIfAbsent(TableParser.normalize(t.getName()), k -> new ArrayList<>()).add(t);
-            teachersByBaseName.computeIfAbsent(baseName(t.getName()), k -> new ArrayList<>()).add(t);
+            teachersByBaseName.computeIfAbsent(TeacherImportParser.baseName(t.getName()), k -> new ArrayList<>()).add(t);
             if (t.getNip() != null && !t.getNip().isBlank()) {
                 teachersByNip.put(t.getNip().replaceAll("\\s+", ""), t);
             }
@@ -113,7 +113,7 @@ public class TeachingAssignmentImportParser {
                     error = "Ada " + found.size() + " guru bernama \"" + teacherName + "\", isi kolom NIP";
                 } else {
                     // Penulisan gelar sering berbeda (A.Md vs A.Md.I.Kom.): cocokkan nama tanpa gelar bila hasilnya tunggal
-                    List<Teacher> byBase = teachersByBaseName.getOrDefault(baseName(teacherName), List.of());
+                    List<Teacher> byBase = teachersByBaseName.getOrDefault(TeacherImportParser.baseName(teacherName), List.of());
                     if (byBase.size() == 1) {
                         teacher = byBase.get(0);
                         warning = "nama guru dicocokkan tanpa gelar: " + teacher.getName();
@@ -210,24 +210,6 @@ public class TeachingAssignmentImportParser {
             label.append(" (").append(subject.getGrade()).append(")");
         }
         return label.toString();
-    }
-
-    /**
-     * Nama tanpa gelar: bagian sebelum koma, lalu kata yang mengandung titik (S.Kom, Drs., A.Md) dibuang.
-     * "Widya Ningsih, A.Md" dan "Widya Ningsih, A.Md.I.Kom." sama-sama menjadi "widyaningsih".
-     */
-    private static String baseName(String name) {
-        if (name == null) {
-            return "";
-        }
-        String beforeComma = name.split(",", 2)[0];
-        StringBuilder words = new StringBuilder();
-        for (String word : beforeComma.trim().split("\\s+")) {
-            if (!word.contains(".")) {
-                words.append(word);
-            }
-        }
-        return TableParser.normalize(words.toString());
     }
 
     private static String combo(int teacherId, int subjectId, int classroomId) {

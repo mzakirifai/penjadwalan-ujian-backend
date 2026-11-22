@@ -3,6 +3,7 @@ package co.id.importer;
 import co.id.model.Teacher;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,6 +16,9 @@ import java.util.Set;
  * Kolom Excel: NIP | Nama | Jenis Kelamin | No. HP | Email | Alamat
  * Wajib: Nama, Jenis Kelamin (kolom jenis_kelamin di database NOT NULL).
  * NIP opsional (banyak guru honorer belum punya NIP), tetapi jika diisi harus unik.
+ * Nama yang sama (perbedaan gelar diabaikan, lihat {@link #baseName}) hanya dianggap guru yang sama bila salah satunya
+ * tidak punya NIP, supaya file yang sama tidak menggandakan guru tanpa NIP bila diimport dua kali.
+ * Nama sama dengan NIP berbeda dianggap dua guru yang berbeda dan tetap diimport.
  */
 public class TeacherImportParser {
 
@@ -34,13 +38,17 @@ public class TeacherImportParser {
 
     public static List<ImportItem<Teacher>> parse(List<TableParser.Row> rows, Collection<Teacher> existing) {
         Set<String> existingNip = new HashSet<>();
+        Map<String, List<Teacher>> existingByName = new HashMap<>();
         for (Teacher t : existing) {
             if (t.getNip() != null) {
                 existingNip.add(t.getNip().trim());
             }
+            existingByName.computeIfAbsent(baseName(t.getName()), k -> new ArrayList<>()).add(t);
         }
 
         Set<String> seen = new HashSet<>();
+        // nama (tanpa gelar) yang sudah muncul di file -> true bila salah satu barisnya tanpa NIP
+        Map<String, Boolean> seenNames = new HashMap<>();
         List<ImportItem<Teacher>> result = new ArrayList<>();
 
         for (TableParser.Row row : rows) {
@@ -60,6 +68,13 @@ public class TeacherImportParser {
                 continue;
             }
 
+            String base = baseName(name);
+            List<Teacher> sameName = existingByName.getOrDefault(base, List.of());
+            Teacher sameNameWithoutNip = sameName.stream().filter(t -> t.getNip() == null || t.getNip().isBlank())
+                    .findFirst().orElse(null);
+            Boolean seenWithoutNip = seenNames.get(base);
+            String warning = null;
+
             String error = null;
             if (!nip.isEmpty() && nip.matches("^\\d+(\\.\\d+)?[eE][+-]?\\d+$")) {
                 error = "NIP terbaca sebagai angka ilmiah, ubah kolom NIP menjadi format Teks";
@@ -77,8 +92,20 @@ public class TeacherImportParser {
                 error = "Format email tidak valid";
             } else if (!nip.isEmpty() && existingNip.contains(nip)) {
                 error = "NIP sudah terdaftar";
+            } else if (!sameName.isEmpty() && nip.isEmpty()) {
+                error = "Sudah terdaftar sebagai \"" + sameName.get(0).getName() + "\", dilewati";
+            } else if (sameNameWithoutNip != null) {
+                error = "Nama sama dengan guru tanpa NIP \"" + sameNameWithoutNip.getName()
+                        + "\". Bila orang yang sama, isi NIP-nya lewat Edit di halaman Guru";
             } else if (!nip.isEmpty() && !seen.add(nip)) {
                 error = "NIP ganda di file";
+            } else if (seenWithoutNip != null && (seenWithoutNip || nip.isEmpty())) {
+                error = "Nama guru ganda di file";
+            } else if (!sameName.isEmpty() || seenWithoutNip != null) {
+                warning = "nama sama dengan guru lain, NIP berbeda";
+            }
+            if (error == null) {
+                seenNames.merge(base, nip.isEmpty(), Boolean::logicalOr);
             }
 
             Teacher teacher = new Teacher();
@@ -91,7 +118,7 @@ public class TeacherImportParser {
 
             result.add(new ImportItem<>(row.getSheet(), row.getRowNumber(),
                     List.of(nip.isEmpty() ? "-" : nip, name, gender == null ? "-" : gender, phone, email, address),
-                    teacher, error));
+                    teacher, error, warning));
         }
         return result;
     }
@@ -111,6 +138,26 @@ public class TeacherImportParser {
             p = "0" + p;
         }
         return p;
+    }
+
+    /**
+     * Nama tanpa gelar untuk membandingkan guru: bagian sebelum koma, lalu kata yang mengandung titik
+     * (S.Kom, Drs., A.Md) dibuang. "Widya Ningsih, A.Md" dan "Widya Ningsih, A.Md.I.Kom." sama-sama "widyaningsih".
+     */
+    public static String baseName(String name) {
+        if (name == null) {
+            return "";
+        }
+        String beforeComma = name.split(",", 2)[0];
+        StringBuilder words = new StringBuilder();
+        for (String word : beforeComma.trim().split("\\s+")) {
+            if (!word.contains(".")) {
+                words.append(word);
+            }
+        }
+        String base = TableParser.normalize(words.toString());
+        // nama yang seluruhnya bergelar (jarang) tetap dibandingkan utuh
+        return base.isEmpty() ? TableParser.normalize(name) : base;
     }
 
     private static String normalizeGender(String value) {

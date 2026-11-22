@@ -103,10 +103,14 @@ public class MasterServiceImpl implements MasterService{
 
         // Validasi ulang di service, jangan hanya mengandalkan pengecekan di layar
         Set<String> seenNip = new HashSet<>();
+        // nama (tanpa gelar) -> true bila ada guru bernama itu yang tidak punya NIP
+        java.util.Map<String, Boolean> seenNames = new java.util.HashMap<>();
         for (Teacher existing : teacherDAO.getAllTeachers()) {
             if (normalizeNip(existing.getNip()) != null) {
                 seenNip.add(normalizeNip(existing.getNip()));
             }
+            seenNames.merge(co.id.importer.TeacherImportParser.baseName(existing.getName()),
+                    normalizeNip(existing.getNip()) == null, Boolean::logicalOr);
         }
 
         for (Teacher teacher : teachers) {
@@ -118,6 +122,14 @@ public class MasterServiceImpl implements MasterService{
             if (teacher.getNip() != null && !seenNip.add(teacher.getNip())) {
                 throw new IllegalArgumentException("NIP " + teacher.getNip() + " sudah terdaftar.");
             }
+            // Cegah guru ganda bila file yang sama diimport dua kali: nama sama dianggap guru yang sama
+            // bila salah satunya tanpa NIP (nama sama dengan NIP berbeda = dua guru berbeda)
+            String base = co.id.importer.TeacherImportParser.baseName(teacher.getName());
+            Boolean sameNameWithoutNip = seenNames.get(base);
+            if (sameNameWithoutNip != null && (sameNameWithoutNip || teacher.getNip() == null)) {
+                throw new IllegalArgumentException("Guru " + teacher.getName() + " sudah terdaftar.");
+            }
+            seenNames.merge(base, teacher.getNip() == null, Boolean::logicalOr);
             teacher.setUpdatedBy(currentUsername);
         }
 
