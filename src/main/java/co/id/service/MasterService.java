@@ -50,6 +50,8 @@ public interface MasterService {
     public int importStudents(List<Student> students, String currentUsername, String currentUserRole);
     public void saveOrUpdateStudent(Student student, String currentUsername, String currentUserRole);
     public void deleteStudent(int id, String currentUserRole);
+    /** Import status administrasi (Lunas / Belum Lunas) dari Excel keuangan; siswa dicocokkan lewat id. */
+    public int importAdminStatuses(List<Student> students, String currentUsername, String currentUserRole);
     /** Hapus semua siswa satu kelas (mis. siswa yang sudah lulus); nilai & kursi pesertanya ikut terhapus. */
     public int deleteStudentsByClassroom(int classroomId, String currentUserRole);
     /** Jumlah data yang ikut terhapus bila siswa satu kelas dihapus: [0] = nilai, [1] = kursi peserta ujian. */

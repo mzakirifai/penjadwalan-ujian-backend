@@ -365,6 +365,39 @@ public class MasterServiceImpl implements MasterService{
         if (studentDAO.isNisnTaken(nisn, student.getId())) {
             throw new IllegalStateException("NISN \"" + nisn + "\" sudah dipakai siswa lain.");
         }
+
+        validateAdminStatus(student);
+    }
+
+    /** Status administrasi hanya "Lunas" / "Belum Lunas"; keterangan opsional, maks. 255 karakter. */
+    private void validateAdminStatus(Student student) {
+        if (student.getAdminStatus() == null) {
+            student.setAdminStatus(Student.ADMIN_PAID);
+        }
+        if (!Student.ADMIN_PAID.equals(student.getAdminStatus()) && !Student.ADMIN_UNPAID.equals(student.getAdminStatus())) {
+            throw new IllegalArgumentException("Status administrasi harus Lunas atau Belum Lunas.");
+        }
+        String note = student.getAdminNote() == null ? null : student.getAdminNote().trim();
+        if (note != null && note.length() > 255) {
+            throw new IllegalArgumentException("Keterangan administrasi maksimal 255 karakter.");
+        }
+        student.setAdminNote(note == null || note.isEmpty() ? null : note);
+    }
+
+    @Override
+    public int importAdminStatuses(List<Student> students, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+        if (students == null || students.isEmpty()) {
+            return 0;
+        }
+        for (Student student : students) {
+            if (student.getId() <= 0) {
+                throw new IllegalArgumentException("Siswa tidak dikenal (NIS " + student.getNis() + ").");
+            }
+            validateAdminStatus(student);
+            student.setUpdatedBy(currentUsername);
+        }
+        return studentDAO.updateAdminStatuses(students);
     }
 
     @Override

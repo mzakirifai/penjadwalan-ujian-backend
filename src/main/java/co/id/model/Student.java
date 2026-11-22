@@ -8,12 +8,19 @@ public class Student {
     private String nisn;
     private String name;
     private String gender;
+    // Status administrasi (keuangan): "Lunas" atau "Belum Lunas". Siswa belum lunas otomatis tidak dicentang
+    // saat memilih peserta ujian, tetapi admin tetap bisa mencentangnya (dispensasi).
+    private String adminStatus = ADMIN_PAID;
+    private String adminNote;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String updatedBy;
     
     // Relasi Many-to-one
     private Classroom classroom;
+
+    public static final String ADMIN_PAID = "Lunas";
+    public static final String ADMIN_UNPAID = "Belum Lunas";
 
     public Student() {
     }
@@ -96,6 +103,27 @@ public class Student {
 
     public Classroom getClassroom() {
         return classroom;
+    }
+
+    public String getAdminStatus() {
+        return adminStatus;
+    }
+
+    public void setAdminStatus(String adminStatus) {
+        this.adminStatus = adminStatus;
+    }
+
+    public String getAdminNote() {
+        return adminNote;
+    }
+
+    public void setAdminNote(String adminNote) {
+        this.adminNote = adminNote;
+    }
+
+    /** true bila status administrasi "Belum Lunas". */
+    public boolean isAdminUnpaid() {
+        return ADMIN_UNPAID.equals(adminStatus);
     }
 
     public void setClassroom(Classroom classroom) {

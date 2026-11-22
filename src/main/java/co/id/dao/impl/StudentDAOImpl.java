@@ -275,8 +275,10 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
 
     @Override
     public void saveOrUpdate(Student student) {
-        String sqlInsert = "INSERT INTO mst_siswa(nis, nisn, nama_siswa, id_kelas, jenis_kelamin, diubah_oleh) VALUES (?, ?, ?, ?, ?, ?)";
-        String sqlUpdate = "UPDATE mst_siswa SET nis = ?, nisn = ?, nama_siswa = ?, id_kelas = ?, jenis_kelamin = ?, diubah_oleh = ? WHERE id_siswa = ?";
+        String sqlInsert = "INSERT INTO mst_siswa(nis, nisn, nama_siswa, id_kelas, jenis_kelamin, status_administrasi, "
+                + "keterangan_administrasi, diubah_oleh) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sqlUpdate = "UPDATE mst_siswa SET nis = ?, nisn = ?, nama_siswa = ?, id_kelas = ?, jenis_kelamin = ?, "
+                + "status_administrasi = ?, keterangan_administrasi = ?, diubah_oleh = ? WHERE id_siswa = ?";
 
         try (Connection connection = getConnection()) {
             if (student.getId() == 0) {
@@ -290,7 +292,9 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                         preparedStatement.setNull(4, Types.INTEGER);
                     }
                     preparedStatement.setString(5, student.getGender());
-                    preparedStatement.setString(6, student.getUpdatedBy());
+                    preparedStatement.setString(6, adminStatusOf(student));
+                    preparedStatement.setString(7, student.getAdminNote());
+                    preparedStatement.setString(8, student.getUpdatedBy());
                     preparedStatement.executeUpdate();
                 }
             } else {
@@ -304,13 +308,48 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                         preparedStatement.setNull(4, Types.INTEGER);
                     }
                     preparedStatement.setString(5, student.getGender());
-                    preparedStatement.setString(6, student.getUpdatedBy());
-                    preparedStatement.setInt(7, student.getId());
+                    preparedStatement.setString(6, adminStatusOf(student));
+                    preparedStatement.setString(7, student.getAdminNote());
+                    preparedStatement.setString(8, student.getUpdatedBy());
+                    preparedStatement.setInt(9, student.getId());
                     preparedStatement.executeUpdate();
                 }
             }
         } catch (Exception exception) {
             throw new IllegalStateException("Gagal menyimpan data ke database: " + exception.getMessage(), exception);
+        }
+    }
+
+    private static String adminStatusOf(Student student) {
+        return student.getAdminStatus() == null ? Student.ADMIN_PAID : student.getAdminStatus();
+    }
+
+    @Override
+    public int updateAdminStatuses(List<Student> students) {
+        String sql = "UPDATE mst_siswa SET status_administrasi = ?, keterangan_administrasi = ?, diubah_oleh = ? WHERE id_siswa = ?";
+
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                for (Student student : students) {
+                    preparedStatement.setString(1, adminStatusOf(student));
+                    preparedStatement.setString(2, student.getAdminNote());
+                    preparedStatement.setString(3, student.getUpdatedBy());
+                    preparedStatement.setInt(4, student.getId());
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+                connection.commit();
+                return students.size();
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Import status administrasi gagal, tidak ada data yang diubah: "
+                    + exception.getMessage(), exception);
         }
     }
 
@@ -407,6 +446,8 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
         student.setNisn(resultSet.getString("nisn"));
         student.setName(resultSet.getString("nama_siswa"));
         student.setGender(resultSet.getString("jenis_kelamin"));
+        student.setAdminStatus(resultSet.getString("status_administrasi"));
+        student.setAdminNote(resultSet.getString("keterangan_administrasi"));
 
         Timestamp createdAt = resultSet.getTimestamp("tanggal_buat");
         if (createdAt != null) {

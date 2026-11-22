@@ -17,6 +17,8 @@ public interface StudentDAO {
     public Set<String> getAllNisn();
     public int saveBatch(List<Student> students);
     public void saveOrUpdate(Student student);
+    /** Ubah status & keterangan administrasi banyak siswa (berdasarkan id) dalam satu transaksi. */
+    public int updateAdminStatuses(List<Student> students);
     public void delete(int id);
     /** Hapus semua siswa satu kelas dalam satu perintah SQL; mengembalikan jumlah siswa yang terhapus. */
     public int deleteByClassroom(int classroomId);

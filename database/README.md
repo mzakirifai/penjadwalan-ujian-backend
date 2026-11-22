@@ -10,7 +10,7 @@
 
 ## Memperbarui database lama (yang dibuat dari dump sebelum 21 Nov 2026)
 
-Backup dulu lewat phpMyAdmin > Export, lalu jalankan file migrasi **berurutan**:
+Backup dulu lewat phpMyAdmin > Export, lalu jalankan file migrasi **berurutan** (yang sudah pernah dijalankan tidak perlu diulang):
 
 | No | File | Isi singkat | Boleh diulang? |
 |---|---|---|---|
@@ -20,6 +20,7 @@ Backup dulu lewat phpMyAdmin > Export, lalu jalankan file migrasi **berurutan**:
 | 4 | `migrasi_akun_guru.sql` | guru yang punya akun tidak bisa dihapus, aturan role akun | ya |
 | 5 | `migrasi_kursi_penempatan.sql` | No. Kursi hanya dari Penempatan Ruangan | ya |
 | 6 | `migrasi_hapus_photo_path.sql` | hapus kolom `photo_path` (foto ada di `photo_data`) | ya |
+| 7 | `migrasi_status_administrasi.sql` | status administrasi siswa (Lunas / Belum Lunas) | ya |
 
 Catatan:
 
@@ -29,5 +30,7 @@ Catatan:
   (tabel `bak_trx_jadwal_ruangan` sudah ada), jadi tidak ada data yang berubah.
 - Nomor 4 diawali query cek. Bila query itu menampilkan baris, perbaiki akun tersebut di menu
   User Management lalu jalankan ulang file nomor 4.
+- Dump dari phpMyAdmin tidak menyimpan aturan CHECK (tabel `users` dan `trx_peserta`). Bila database dipulihkan
+  dari dump, jalankan lagi nomor 4 dan 5, atau buat struktur dari `schema.sql` lalu impor datanya saja.
 - Tabel `bak_trx_jadwal_ruangan` hanya cadangan dari migrasi nomor 3. Boleh dihapus setelah data
   penempatan dipastikan benar.

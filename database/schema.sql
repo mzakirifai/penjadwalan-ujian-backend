@@ -168,6 +168,8 @@ CREATE TABLE `mst_siswa` (
   `nama_siswa` varchar(100) NOT NULL,
   `id_kelas` int(11) DEFAULT NULL,
   `jenis_kelamin` enum('Laki-laki','Perempuan') DEFAULT NULL,
+  `status_administrasi` enum('Lunas','Belum Lunas') NOT NULL DEFAULT 'Lunas',
+  `keterangan_administrasi` varchar(255) DEFAULT NULL,
   `tanggal_buat` timestamp NOT NULL DEFAULT current_timestamp(),
   `tanggal_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `diubah_oleh` varchar(50) DEFAULT NULL,
