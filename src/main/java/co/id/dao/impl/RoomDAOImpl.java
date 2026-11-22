@@ -3,6 +3,7 @@ package co.id.dao.impl;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.RoomDAO;
 import co.id.model.Room;
+import co.id.model.SessionOccupancy;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -94,6 +95,39 @@ public class RoomDAOImpl extends DatabaseConfiguration implements RoomDAO{
         }
 
         return 0;
+    }
+
+    @Override
+    public List<SessionOccupancy> findUpcomingOverCapacity(int roomId, int capacity) {
+        // Ruangan campur: satu sesi bisa berisi kursi dari beberapa jadwal, jadi dihitung per tanggal + jam.
+        String sql = "SELECT ej.tanggal, ej.jam_mulai, ej.jam_selesai, COUNT(*) AS jumlah "
+                + "FROM trx_peserta ep JOIN trx_jadwal ej ON ej.id_ujian = ep.id_ujian "
+                + "WHERE ep.id_ruangan = ? AND ej.tanggal >= CURDATE() "
+                + "GROUP BY ej.tanggal, ej.jam_mulai, ej.jam_selesai "
+                + "HAVING COUNT(*) > ? "
+                + "ORDER BY jumlah DESC, ej.tanggal, ej.jam_mulai";
+        List<SessionOccupancy> result = new ArrayList<>();
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, roomId);
+            preparedStatement.setInt(2, capacity);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    result.add(new SessionOccupancy(
+                            resultSet.getDate("tanggal").toLocalDate(),
+                            resultSet.getTime("jam_mulai").toLocalTime(),
+                            resultSet.getTime("jam_selesai").toLocalTime(),
+                            resultSet.getInt("jumlah")));
+                }
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal memeriksa penempatan ruangan: " + exception.getMessage(), exception);
+        }
+
+        return result;
     }
 
     @Override

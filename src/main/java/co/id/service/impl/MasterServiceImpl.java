@@ -15,6 +15,7 @@ import co.id.dao.impl.TeacherDAOImpl;
 import co.id.model.Classroom;
 import co.id.model.Major;
 import co.id.model.Room;
+import co.id.model.SessionOccupancy;
 import co.id.model.Student;
 import co.id.model.Subject;
 import co.id.model.Teacher;
@@ -430,6 +431,17 @@ public class MasterServiceImpl implements MasterService{
     @Override
     public void saveOrUpdateRoom(Room room, String currentUsername, String currentUserRole) {
         ensureIsAdmin(currentUserRole);
+        if (room.getId() > 0) {
+            List<SessionOccupancy> over = roomDAO.findUpcomingOverCapacity(room.getId(), room.getCapacity());
+            if (!over.isEmpty()) {
+                String sessions = over.stream().limit(3).map(SessionOccupancy::getLabel)
+                        .collect(java.util.stream.Collectors.joining(", "));
+                throw new IllegalArgumentException("Kapasitas tidak bisa diubah menjadi " + room.getCapacity()
+                        + " karena ruangan ini sudah ditempati lebih banyak siswa pada: " + sessions
+                        + (over.size() > 3 ? " dan " + (over.size() - 3) + " sesi lain" : "")
+                        + ". Atur ulang Penempatan Ruangan sesi tersebut terlebih dahulu.");
+            }
+        }
         room.setUpdatedBy(currentUsername);
         roomDAO.saveOrUpdate(room);
     }
