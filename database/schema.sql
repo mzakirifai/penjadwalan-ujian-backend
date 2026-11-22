@@ -311,7 +311,8 @@ CREATE TABLE `trx_peserta` (
   KEY `trx_peserta_ibfk_3` (`id_ruangan`),
   CONSTRAINT `trx_peserta_ibfk_1` FOREIGN KEY (`id_ujian`) REFERENCES `trx_jadwal` (`id_ujian`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `trx_peserta_ibfk_2` FOREIGN KEY (`id_siswa`) REFERENCES `mst_siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `trx_peserta_ibfk_3` FOREIGN KEY (`id_ruangan`) REFERENCES `mst_ruangan` (`id_ruangan`) ON UPDATE CASCADE
+  CONSTRAINT `trx_peserta_ibfk_3` FOREIGN KEY (`id_ruangan`) REFERENCES `mst_ruangan` (`id_ruangan`),
+  CONSTRAINT `chk_peserta_kursi_ruangan` CHECK (`no_kursi` is null or `id_ruangan` is not null)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

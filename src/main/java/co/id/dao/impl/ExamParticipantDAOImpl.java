@@ -271,58 +271,6 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
     }
 
     @Override
-    public boolean isSeatTakenInRoom(int examScheduleId, int roomId, String seatNumber, int excludeStudentId) {
-        String sql = "SELECT COUNT(*) AS total FROM trx_peserta ep "
-                + "JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
-                + "JOIN trx_jadwal cur ON cur.id_ujian = ? "
-                + "WHERE ep.id_ruangan = ? AND ep.no_kursi = ? AND NOT (ep.id_ujian = ? AND ep.id_siswa = ?) "
-                + "AND ej.tanggal = cur.tanggal AND ej.jam_mulai < cur.jam_selesai AND ej.jam_selesai > cur.jam_mulai";
-
-        try (Connection connection = getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            preparedStatement.setInt(1, examScheduleId);
-            preparedStatement.setInt(2, roomId);
-            preparedStatement.setString(3, seatNumber);
-            preparedStatement.setInt(4, examScheduleId);
-            preparedStatement.setInt(5, excludeStudentId);
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) {
-                    return resultSet.getInt("total") > 0;
-                }
-            }
-        } catch (Exception exception) {
-            throw new IllegalStateException("Gagal memeriksa kursi: " + exception.getMessage(), exception);
-        }
-
-        return false;
-    }
-
-    @Override
-    public boolean isSeatTaken(int examScheduleId, String seatNumber, int excludeStudentId) {
-        String sql = "SELECT COUNT(*) AS total FROM trx_peserta WHERE id_ujian = ? AND no_kursi = ? AND id_siswa <> ?";
-
-        try (Connection connection = getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            preparedStatement.setInt(1, examScheduleId);
-            preparedStatement.setString(2, seatNumber);
-            preparedStatement.setInt(3, excludeStudentId);
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) {
-                    return resultSet.getInt("total") > 0;
-                }
-            }
-        } catch (Exception exception) {
-            exception.printStackTrace();
-        }
-
-        return false;
-    }
-
-    @Override
     public boolean isParticipantNumberTaken(int examScheduleId, String participantNumber, int excludeStudentId) {
         String sql = "SELECT COUNT(*) AS total FROM trx_peserta WHERE id_ujian = ? AND no_peserta = ? AND id_siswa <> ?";
 

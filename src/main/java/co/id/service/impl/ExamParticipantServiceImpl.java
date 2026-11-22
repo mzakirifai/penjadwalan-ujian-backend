@@ -65,21 +65,9 @@ public class ExamParticipantServiceImpl implements ExamParticipantService{
                     "Siswa ini sudah terdaftar sebagai peserta pada jadwal ujian yang sama.");
         }
 
-        // (Kapasitas ruangan dijaga oleh menu Penempatan Ruangan: ruangan tidak lagi melekat pada jadwal.)
+        // Ruangan, kapasitas, dan No. Kursi diatur oleh menu Penempatan Ruangan, bukan di sini.
 
-        // 2. Cek nomor kursi sudah dipakai siswa lain
-        // Peserta yang sudah ditempatkan di ruangan campur: kursi dicek per ruangan (dan lintas ujian pada waktu yang sama)
-        boolean seatTaken = examParticipant.getRoom() != null
-                ? examParticipantDAO.isSeatTakenInRoom(examScheduleId, examParticipant.getRoom().getId(),
-                        examParticipant.getSeatNumber(), excludeStudentId)
-                : examParticipantDAO.isSeatTaken(examScheduleId, examParticipant.getSeatNumber(), excludeStudentId);
-        if (seatTaken) {
-            throw new IllegalStateException(
-                    "No. Kursi \"" + examParticipant.getSeatNumber() + "\" sudah dipakai oleh siswa lain "
-                            + (examParticipant.getRoom() != null ? "di ruangan " + examParticipant.getRoom().getName() : "pada ujian ini") + ".");
-        }
-
-        // 3. Cek nomor peserta sudah dipakai siswa lain
+        // 2. Cek nomor peserta sudah dipakai siswa lain
         if (examParticipantDAO.isParticipantNumberTaken(examScheduleId, examParticipant.getParticipantNumber(), excludeStudentId)) {
             throw new IllegalStateException(
                     "No. Peserta \"" + examParticipant.getParticipantNumber() + "\" sudah dipakai oleh siswa lain pada ujian ini.");
@@ -116,9 +104,6 @@ public class ExamParticipantServiceImpl implements ExamParticipantService{
         }
         if (examParticipant.getParticipantNumber() == null || examParticipant.getParticipantNumber().isBlank()) {
             throw new IllegalArgumentException("No. Peserta wajib diisi.");
-        }
-        if (examParticipant.getSeatNumber() == null || examParticipant.getSeatNumber().isBlank()) {
-            throw new IllegalArgumentException("No. Kursi wajib diisi.");
         }
     }
 }

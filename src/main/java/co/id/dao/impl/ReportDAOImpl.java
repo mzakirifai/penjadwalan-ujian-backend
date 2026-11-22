@@ -262,9 +262,12 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
                     ParticipantCardReportItem item = new ParticipantCardReportItem();
  
                     item.setParticipantNumber(resultSet.getString("no_peserta"));
-                    item.setSeatNumber(resultSet.getString("no_kursi"));
+                    // Belum ditempatkan: ruangan & kursi masih kosong, tampilkan "-" (bukan "null" di kartu)
+                    String seatNumber = resultSet.getString("no_kursi");
+                    String roomName = resultSet.getString("nama_ruangan");
+                    item.setSeatNumber(seatNumber != null ? seatNumber : "-");
                     item.setSubjectName(resultSet.getString("nama_mapel"));
-                    item.setRoomName(resultSet.getString("nama_ruangan"));
+                    item.setRoomName(roomName != null ? roomName : "-");
  
                     java.sql.Date date = resultSet.getDate("tanggal");
                     item.setDate(date != null ? date.toLocalDate().format(dateFormatter) : "-");
