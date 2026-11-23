@@ -19,6 +19,9 @@ public interface ExamScheduleService {
     public java.util.Map<java.time.LocalDate, Integer> getExamCountPerDay(java.time.LocalDate start, 
             java.time.LocalDate end);
     public void save(ExamSchedule examSchedule, String currentUsername, String currentUserRole);
+
+    /** Simpan jadwal hasil import Excel satu per satu (aturan sama dengan save). Mengembalikan jumlah tersimpan. */
+    public int importExamSchedules(List<ExamSchedule> schedules, String currentUsername, String currentUserRole);
     /** True jika menyimpan perubahan ini (tanggal/jam/kelas) akan mengosongkan penempatan ruangan yang sudah ada. */
     public boolean willResetPlacement(ExamSchedule examSchedule);
     /** True jika jadwal sudah punya penempatan ruangan. */

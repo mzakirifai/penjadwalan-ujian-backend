@@ -96,6 +96,24 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     }
 
     @Override
+    public int importExamSchedules(List<ExamSchedule> schedules, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+        int saved = 0;
+        for (ExamSchedule schedule : schedules) {
+            try {
+                save(schedule, currentUsername, currentUserRole);
+            } catch (RuntimeException ex) {
+                throw new IllegalStateException(saved + " jadwal sudah tersimpan, lalu berhenti di jadwal "
+                        + (schedule.getSubject() != null ? schedule.getSubject().getName() : "?") + " kelas "
+                        + (schedule.getClassroom() != null ? schedule.getClassroom().getName() : "?") + ":\n"
+                        + ex.getMessage(), ex);
+            }
+            saved++;
+        }
+        return saved;
+    }
+
+    @Override
     public boolean willResetPlacement(ExamSchedule examSchedule) {
         if (examSchedule == null || examSchedule.getId() == 0) {
             return false;
