@@ -251,6 +251,30 @@ public class MasterServiceImpl implements MasterService{
                 "Kelas ini tidak bisa dihapus karena masih punya jadwal ujian. Hapus atau ubah jadwal ujiannya terlebih dahulu.");
     }
 
+    @Override
+    public int importClassrooms(List<Classroom> classrooms, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+        if (classrooms == null || classrooms.isEmpty()) {
+            return 0;
+        }
+        // Validasi ulang di service (aturan sama dengan form Kelas): tingkat & jurusan wajib, nama tidak boleh kembar
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (Classroom existing : classroomDAO.getAllClassrooms()) {
+            names.add(co.id.importer.TableParser.normalize(existing.getName()));
+        }
+        for (Classroom classroom : classrooms) {
+            if (classroom.getName() == null || classroom.getName().isBlank()
+                    || classroom.getGrade() == null || classroom.getMajor() == null) {
+                throw new IllegalArgumentException("Tingkat dan Jurusan wajib diisi (" + classroom.getName() + ").");
+            }
+            if (!names.add(co.id.importer.TableParser.normalize(classroom.getName()))) {
+                throw new IllegalArgumentException("Kelas " + classroom.getName() + " sudah ada.");
+            }
+            classroom.setUpdatedBy(currentUsername);
+        }
+        return classroomDAO.saveBatch(classrooms);
+    }
+
     // Student
     @Override
     public List<Student> getAllStudents() {
@@ -541,6 +565,32 @@ public class MasterServiceImpl implements MasterService{
         }
         room.setUpdatedBy(currentUsername);
         roomDAO.saveOrUpdate(room);
+    }
+
+    @Override
+    public int importRooms(List<Room> rooms, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+        if (rooms == null || rooms.isEmpty()) {
+            return 0;
+        }
+        // Validasi ulang di service (aturan sama dengan form Ruangan): nama wajib, kapasitas > 0, nama tidak kembar
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (Room existing : roomDAO.getAllRooms()) {
+            names.add(co.id.importer.TableParser.normalize(existing.getName()));
+        }
+        for (Room room : rooms) {
+            if (room.getName() == null || room.getName().isBlank()) {
+                throw new IllegalArgumentException("Nama Ruangan wajib diisi.");
+            }
+            if (room.getCapacity() <= 0) {
+                throw new IllegalArgumentException("Kapasitas ruangan " + room.getName() + " harus lebih dari 0.");
+            }
+            if (!names.add(co.id.importer.TableParser.normalize(room.getName()))) {
+                throw new IllegalArgumentException("Ruangan " + room.getName() + " sudah ada.");
+            }
+            room.setUpdatedBy(currentUsername);
+        }
+        return roomDAO.saveBatch(rooms);
     }
 
     @Override

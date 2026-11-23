@@ -10,5 +10,6 @@ public interface ClassroomDAO {
     public int countClassrooms();
     public Classroom getById(int id);
     public void saveOrUpdate(Classroom classroom);
+    public int saveBatch(List<Classroom> classrooms);
     public void delete(int id);
 }

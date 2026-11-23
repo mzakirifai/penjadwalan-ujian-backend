@@ -34,6 +34,17 @@ public class StudentExcelReader {
     public static Result read(File file) throws IOException {
         Result result = new Result();
 
+        // CSV/TXT: satu tabel saja; tingkat diambil dari kolom Kelas (mis. "X TKJ 1")
+        String fileName = file.getName().toLowerCase();
+        if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
+            List<StudentImportRow> rows = StudentSheetParser.parse("CSV", CsvGridReader.read(file));
+            if (!rows.isEmpty()) {
+                result.sheetsRead.add(file.getName());
+                result.rows.addAll(rows);
+            }
+            return result;
+        }
+
         try (FileInputStream inputStream = new FileInputStream(file);
              Workbook workbook = WorkbookFactory.create(inputStream)) {
 

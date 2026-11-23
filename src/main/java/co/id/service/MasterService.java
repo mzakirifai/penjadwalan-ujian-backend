@@ -37,6 +37,7 @@ public interface MasterService {
     public Classroom getByIdClassroom(int id);
     public void saveOrUpdateClassroom(Classroom classroom, String currentUsername, String currentUserRole);
     public void deleteClassroom(int id, String currentUserRole);
+    public int importClassrooms(List<Classroom> classrooms, String currentUsername, String currentUserRole);
     
     // Student
     public List<Student> getAllStudents();
@@ -75,4 +76,5 @@ public interface MasterService {
     public Room getByIdRoom(int id);
     public void saveOrUpdateRoom(Room room, String currentUsername, String currentUserRole);
     public void deleteRoom(int id, String currentUserRole);
+    public int importRooms(List<Room> rooms, String currentUsername, String currentUserRole);
 }

@@ -141,6 +141,57 @@ public class ClassroomDAOImpl extends DatabaseConfiguration implements Classroom
         return null;
     }
 
+    // Simpan banyak kelas dalam satu transaksi (impor): kalau satu gagal, semuanya dibatalkan.
+    // Kode kelas dibuat sama seperti saveOrUpdate: "K" + id 3 digit.
+    @Override
+    public int saveBatch(List<Classroom> classrooms) {
+        String sqlInsert = "INSERT INTO mst_kelas(nama_kelas, tingkat, id_jurusan, diubah_oleh) VALUES (?, ?, ?, ?)";
+        String sqlCode = "UPDATE mst_kelas SET kode_kelas = ? WHERE id_kelas = ?";
+
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement insert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+                 PreparedStatement updateCode = connection.prepareStatement(sqlCode)) {
+                for (Classroom classroom : classrooms) {
+                    insert.setString(1, classroom.getName());
+                    insert.setString(2, classroom.getGrade());
+                    if (classroom.getMajor() != null) {
+                        insert.setInt(3, classroom.getMajor().getId());
+                    } else {
+                        insert.setNull(3, Types.INTEGER);
+                    }
+                    insert.setString(4, classroom.getUpdatedBy());
+                    insert.executeUpdate();
+
+                    try (ResultSet keys = insert.getGeneratedKeys()) {
+                        if (keys.next()) {
+                            int newId = keys.getInt(1);
+                            String code = "K" + String.format("%03d", newId);
+                            updateCode.setString(1, code);
+                            updateCode.setInt(2, newId);
+                            updateCode.executeUpdate();
+                            classroom.setId(newId);
+                            classroom.setCode(code);
+                        }
+                    }
+                }
+                connection.commit();
+                return classrooms.size();
+            } catch (Exception exception) {
+                connection.rollback();
+                for (Classroom classroom : classrooms) {
+                    classroom.setId(0);
+                    classroom.setCode(null);
+                }
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Impor kelas gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
+        }
+    }
+
     @Override
     public void saveOrUpdate(Classroom classroom) {
         String sqlInsert = "INSERT INTO mst_kelas(nama_kelas, tingkat, id_jurusan, diubah_oleh) VALUES (?, ?, ?, ?)";

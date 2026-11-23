@@ -151,6 +151,53 @@ public class RoomDAOImpl extends DatabaseConfiguration implements RoomDAO{
         return null;
     }
 
+    // Simpan banyak ruangan dalam satu transaksi (impor): kalau satu gagal, semuanya dibatalkan.
+    // Kode ruangan dibuat sama seperti saveOrUpdate: "R" + id 3 digit.
+    @Override
+    public int saveBatch(List<Room> rooms) {
+        String sqlInsert = "INSERT INTO mst_ruangan(nama_ruangan, lantai, kapasitas, diubah_oleh) VALUES (?, ?, ?, ?)";
+        String sqlCode = "UPDATE mst_ruangan SET kode_ruangan = ? WHERE id_ruangan = ?";
+
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement insert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+                 PreparedStatement updateCode = connection.prepareStatement(sqlCode)) {
+                for (Room room : rooms) {
+                    insert.setString(1, room.getName());
+                    insert.setInt(2, room.getFloor());
+                    insert.setInt(3, room.getCapacity());
+                    insert.setString(4, room.getUpdatedBy());
+                    insert.executeUpdate();
+
+                    try (ResultSet keys = insert.getGeneratedKeys()) {
+                        if (keys.next()) {
+                            int newId = keys.getInt(1);
+                            String code = "R" + String.format("%03d", newId);
+                            updateCode.setString(1, code);
+                            updateCode.setInt(2, newId);
+                            updateCode.executeUpdate();
+                            room.setId(newId);
+                            room.setCode(code);
+                        }
+                    }
+                }
+                connection.commit();
+                return rooms.size();
+            } catch (Exception exception) {
+                connection.rollback();
+                for (Room room : rooms) {
+                    room.setId(0);
+                    room.setCode(null);
+                }
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Impor ruangan gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
+        }
+    }
+
     @Override
     public void saveOrUpdate(Room room) {
         String sqlInsert = "INSERT INTO mst_ruangan(nama_ruangan, lantai, kapasitas, diubah_oleh) VALUES (?, ?, ?, ?)";
