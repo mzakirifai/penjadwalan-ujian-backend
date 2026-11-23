@@ -21,6 +21,7 @@ Backup dulu lewat phpMyAdmin > Export, lalu jalankan file migrasi **berurutan** 
 | 5 | `migrasi_kursi_penempatan.sql` | No. Kursi hanya dari Penempatan Ruangan | ya |
 | 6 | `migrasi_hapus_photo_path.sql` | hapus kolom `photo_path` (foto ada di `photo_data`) | ya |
 | 7 | `migrasi_status_administrasi.sql` | status administrasi siswa (Lunas / Belum Lunas) | ya |
+| 8 | `migrasi_mode_ujian.sql` | mode ujian per jadwal (Offline / Online) | ya |
 
 Catatan:
 

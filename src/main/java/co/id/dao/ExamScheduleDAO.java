@@ -23,6 +23,8 @@ public interface ExamScheduleDAO {
     public void saveOrUpdate(ExamSchedule examSchedule, boolean resetPlacement);
     /** True jika jadwal sudah punya penempatan ruangan (kursi peserta atau ruangan/pengawas data lama). */
     public boolean hasPlacement(int scheduleId);
+
+    public int updateMode(List<Integer> scheduleIds, String mode, String updatedBy);
     /** Ringkasan penempatan ruangan (ruangan, pengawas, status) untuk daftar jadwal, per id jadwal. */
     public java.util.Map<Integer, co.id.model.PlacementSummary> getPlacementSummaries(List<Integer> scheduleIds);
     /** Sesi lain di tanggal tersebut yang jamnya bertumpuk tetapi tidak sama persis dengan rentang ini. */

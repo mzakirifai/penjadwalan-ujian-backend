@@ -18,7 +18,8 @@ public class PlacementSummary {
         TANPA_PENGAWAS("Tanpa pengawas"),
         SEBAGIAN("Sebagian ditempatkan"),
         BELUM("Belum ditempatkan"),
-        TANPA_SISWA("Kelas tanpa siswa");
+        TANPA_SISWA("Kelas tanpa siswa"),
+        ONLINE("Online (tanpa ruangan)");
 
         private final String label;
 
@@ -56,6 +57,7 @@ public class PlacementSummary {
     private final List<RoomUsage> rooms = new ArrayList<>();
     private int classStudentCount;   // jumlah siswa di kelas jadwal ini
     private int unplacedCount;       // siswa kelas yang belum mendapat kursi
+    private boolean online;          // ujian online: tidak memakai ruangan & pengawas
 
     public PlacementSummary(int scheduleId) {
         this.scheduleId = scheduleId;
@@ -68,11 +70,17 @@ public class PlacementSummary {
     public int getUnplacedCount() { return unplacedCount; }
     public void setUnplacedCount(int unplacedCount) { this.unplacedCount = unplacedCount; }
 
+    public boolean isOnline() { return online; }
+    public void setOnline(boolean online) { this.online = online; }
+
     public int getRoomsWithoutSupervisor() {
         return (int) rooms.stream().filter(r -> r.getSupervisorName() == null).count();
     }
 
     public Status getStatus() {
+        if (online) {
+            return Status.ONLINE;
+        }
         if (rooms.isEmpty()) {
             return classStudentCount == 0 ? Status.TANPA_SISWA : Status.BELUM;
         }
@@ -99,6 +107,9 @@ public class PlacementSummary {
 
     /** Teks kolom Ruangan, mis. "R004 (20), R001 (14)"; jadwal lama cukup nama ruangannya. */
     public String getRoomsLabel() {
+        if (online) {
+            return "Online";
+        }
         if (rooms.isEmpty()) {
             return "Belum ditempatkan";
         }
@@ -109,6 +120,9 @@ public class PlacementSummary {
 
     /** Rincian untuk tooltip kolom Ruangan. */
     public String getRoomsDetail() {
+        if (online) {
+            return "Ujian online: tidak memakai ruangan dan pengawas.";
+        }
         if (rooms.isEmpty()) {
             return "Atur di menu Transaksi > Penempatan Ruangan.";
         }
@@ -121,6 +135,9 @@ public class PlacementSummary {
 
     /** Teks kolom Pengawas: nama-nama pengawas (tanpa duplikat), atau "-" bila belum ada. */
     public String getSupervisorsLabel() {
+        if (online) {
+            return "-";
+        }
         Set<String> names = new LinkedHashSet<>();
         for (RoomUsage room : rooms) {
             if (room.getSupervisorName() != null) {

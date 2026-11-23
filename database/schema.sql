@@ -217,6 +217,7 @@ CREATE TABLE `trx_jadwal` (
   `jenis_ujian` varchar(20) NOT NULL,
   `semester` varchar(20) DEFAULT NULL,
   `tahun_akademik` varchar(10) DEFAULT NULL,
+  `mode_ujian` enum('Offline','Online') NOT NULL DEFAULT 'Offline',
   `tanggal` date NOT NULL,
   `jam_mulai` time NOT NULL,
   `jam_selesai` time NOT NULL,

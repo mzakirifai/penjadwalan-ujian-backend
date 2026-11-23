@@ -234,7 +234,8 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
  
         String sql = "SELECT ep.no_peserta, ep.no_kursi, "
                 + "ej.tanggal, ej.jam_mulai, ej.jam_selesai, "
-                + "CONCAT(m.nama_mapel, IF(ej.kode_guru IS NULL, '', CONCAT(' (', ej.kode_guru, ')'))) AS nama_mapel, r.nama_ruangan "
+                + "CONCAT(m.nama_mapel, IF(ej.kode_guru IS NULL, '', CONCAT(' (', ej.kode_guru, ')'))) AS nama_mapel, "
+                + "IF(ej.mode_ujian = 'Online', 'Online', r.nama_ruangan) AS nama_ruangan "
                 + "FROM trx_peserta ep "
                 + "JOIN trx_jadwal ej ON ep.id_ujian = ej.id_ujian "
                 + "LEFT JOIN mst_mapel m ON ej.id_mapel = m.id_mapel "

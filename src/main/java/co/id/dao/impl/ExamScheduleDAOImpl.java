@@ -333,10 +333,10 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
     @Override
     public void saveOrUpdate(ExamSchedule examSchedule, boolean resetPlacement) {
-        String sqlInsert = "INSERT INTO trx_jadwal(jenis_ujian, semester, tahun_akademik, tanggal, jam_mulai, jam_selesai, id_mapel, id_kelas, keterangan, diubah_oleh, kode_guru) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sqlInsert = "INSERT INTO trx_jadwal(jenis_ujian, semester, tahun_akademik, tanggal, jam_mulai, jam_selesai, id_mapel, id_kelas, keterangan, diubah_oleh, kode_guru, mode_ujian) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         String sqlUpdate = "UPDATE trx_jadwal SET jenis_ujian = ?, semester = ?, tahun_akademik = ?, tanggal = ?, jam_mulai = ?, jam_selesai = ?, "
-                + "id_mapel = ?, id_kelas = ?, keterangan = ?, diubah_oleh = ?, kode_guru = ? WHERE id_ujian = ?";
+                + "id_mapel = ?, id_kelas = ?, keterangan = ?, diubah_oleh = ?, kode_guru = ?, mode_ujian = ? WHERE id_ujian = ?";
 
         try (Connection connection = getConnection()) {
             connection.setAutoCommit(false);
@@ -367,7 +367,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 } else {
                     Object[] oldSlot = resetPlacement ? readSlot(connection, examSchedule.getId()) : null;
                     if (resetPlacement) {
-                        // tanggal/jam/kelas berubah: kursi & ruangan lama tidak berlaku lagi
+                        // tanggal/jam/kelas berubah atau jadi online: kursi & ruangan lama tidak berlaku lagi
                         try (PreparedStatement clearSeats = connection.prepareStatement(
                                 "UPDATE trx_peserta SET id_ruangan = NULL, no_kursi = NULL, diubah_oleh = ? WHERE id_ujian = ?")) {
                             clearSeats.setString(1, examSchedule.getUpdatedBy());
@@ -378,7 +378,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
 
                     try (PreparedStatement preparedStatement = connection.prepareStatement(sqlUpdate)) {
                         bindCommonFields(preparedStatement, examSchedule);
-                        preparedStatement.setInt(12, examSchedule.getId());
+                        preparedStatement.setInt(13, examSchedule.getId());
                         preparedStatement.executeUpdate();
                     }
 
@@ -428,6 +428,55 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
         } else {
             preparedStatement.setNull(11, Types.INTEGER);
         }
+        preparedStatement.setString(12, examSchedule.isOnline() ? ExamSchedule.MODE_ONLINE : ExamSchedule.MODE_OFFLINE);
+    }
+
+    // Ubah mode banyak jadwal sekaligus. Jadwal yang dijadikan Online dikosongkan ruangan & kursinya,
+    // lalu pengawas di ruangan yang jadi kosong ikut dibersihkan. Semua atau tidak sama sekali.
+    @Override
+    public int updateMode(List<Integer> scheduleIds, String mode, String updatedBy) {
+        boolean online = ExamSchedule.MODE_ONLINE.equals(mode);
+        int changed = 0;
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                for (Integer id : scheduleIds) {
+                    Object[] slot = readSlot(connection, id);
+                    if (slot == null) {
+                        continue;
+                    }
+                    if (online) {
+                        try (PreparedStatement clearSeats = connection.prepareStatement(
+                                "UPDATE trx_peserta SET id_ruangan = NULL, no_kursi = NULL, diubah_oleh = ? "
+                                + "WHERE id_ujian = ? AND (id_ruangan IS NOT NULL OR no_kursi IS NOT NULL)")) {
+                            clearSeats.setString(1, updatedBy);
+                            clearSeats.setInt(2, id);
+                            clearSeats.executeUpdate();
+                        }
+                    }
+                    try (PreparedStatement ps = connection.prepareStatement(
+                            "UPDATE trx_jadwal SET mode_ujian = ?, diubah_oleh = ? WHERE id_ujian = ? AND mode_ujian <> ?")) {
+                        ps.setString(1, mode);
+                        ps.setString(2, updatedBy);
+                        ps.setInt(3, id);
+                        ps.setString(4, mode);
+                        changed += ps.executeUpdate();
+                    }
+                    if (online) {
+                        removeIdleSupervisors(connection, slot[0], slot[1], slot[2]);
+                    }
+                }
+                connection.commit();
+            } catch (Exception exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Gagal mengubah mode ujian: " + exception.getMessage(), exception);
+        }
+        return changed;
     }
 
     @Override
@@ -515,7 +564,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 + "ORDER BY ep.id_ujian, r.kode_ruangan, r.nama_ruangan";
 
         // 2. Jumlah siswa kelas
-        String sqlSchedule = "SELECT ej.id_ujian, "
+        String sqlSchedule = "SELECT ej.id_ujian, ej.mode_ujian, "
                 + "(SELECT COUNT(*) FROM mst_siswa s WHERE s.id_kelas = ej.id_kelas) AS jumlah_siswa "
                 + "FROM trx_jadwal ej "
                 + "WHERE ej.id_ujian IN (" + in + ")";
@@ -545,6 +594,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         result.get(rs.getInt("id_ujian")).setClassStudentCount(rs.getInt("jumlah_siswa"));
+                        result.get(rs.getInt("id_ujian")).setOnline(ExamSchedule.MODE_ONLINE.equals(rs.getString("mode_ujian")));
                     }
                 }
             }
@@ -576,6 +626,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
         String sql = "SELECT jam_mulai, jam_selesai, COUNT(*) AS total FROM trx_jadwal "
                 + "WHERE tanggal = ? AND jam_mulai < ? AND jam_selesai > ? "
                 + "AND NOT (jam_mulai = ? AND jam_selesai = ?) AND id_ujian <> ? "
+                + "AND mode_ujian = 'Offline' " // ujian online tidak ikut sesi ruangan
                 + "GROUP BY jam_mulai, jam_selesai ORDER BY jam_mulai, jam_selesai";
 
         List<co.id.model.SessionSlot> slots = new ArrayList<>();
@@ -646,6 +697,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
         examSchedule.setTeacherCode(resultSet.wasNull() ? null : teacherCode);
 
         examSchedule.setExamType(resultSet.getString("jenis_ujian"));
+        examSchedule.setMode(resultSet.getString("mode_ujian"));
         examSchedule.setSemester(resultSet.getString("semester"));
         examSchedule.setAcademicYear(resultSet.getString("tahun_akademik"));
 

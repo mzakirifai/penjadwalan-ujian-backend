@@ -47,6 +47,7 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
         Map<String, List<ExamSchedule>> grouped = new LinkedHashMap<>();
         examScheduleDAO.getAllExamSchedulesDetailed().stream()
                 .filter(s -> date.equals(s.getDate()) && s.getStartTime() != null && s.getEndTime() != null)
+                .filter(s -> !s.isOnline()) // ujian online tidak memakai ruangan
                 .sorted(Comparator.comparing(ExamSchedule::getStartTime).thenComparing(ExamSchedule::getEndTime)
                         .thenComparingInt(ExamSchedule::getId))
                 .forEach(s -> grouped.computeIfAbsent(s.getStartTime() + "-" + s.getEndTime(), k -> new ArrayList<>()).add(s));

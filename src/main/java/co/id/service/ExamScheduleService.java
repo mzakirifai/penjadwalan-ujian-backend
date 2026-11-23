@@ -26,6 +26,9 @@ public interface ExamScheduleService {
     public boolean willResetPlacement(ExamSchedule examSchedule);
     /** True jika jadwal sudah punya penempatan ruangan. */
     public boolean hasPlacement(int scheduleId);
+
+    /** Ubah mode (Offline/Online) banyak jadwal sekaligus; jadi Online = penempatan ruangannya dikosongkan. */
+    public int changeMode(List<Integer> scheduleIds, String mode, String currentUsername, String currentUserRole);
     /** Ringkasan penempatan ruangan (ruangan, pengawas, status) untuk daftar jadwal, per id jadwal. */
     public java.util.Map<Integer, co.id.model.PlacementSummary> getPlacementSummaries(List<Integer> scheduleIds);
     /** Sesi lain di tanggal tersebut yang jamnya bertumpuk tetapi tidak sama persis (tidak bisa dicampur). */

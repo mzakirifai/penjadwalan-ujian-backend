@@ -114,6 +114,18 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     }
 
     @Override
+    public int changeMode(List<Integer> scheduleIds, String mode, String currentUsername, String currentUserRole) {
+        ensureIsAdmin(currentUserRole);
+        if (!ExamSchedule.MODE_ONLINE.equals(mode) && !ExamSchedule.MODE_OFFLINE.equals(mode)) {
+            throw new IllegalArgumentException("Mode ujian harus Offline atau Online.");
+        }
+        if (scheduleIds == null || scheduleIds.isEmpty()) {
+            return 0;
+        }
+        return examScheduleDAO.updateMode(scheduleIds, mode, currentUsername);
+    }
+
+    @Override
     public boolean willResetPlacement(ExamSchedule examSchedule) {
         if (examSchedule == null || examSchedule.getId() == 0) {
             return false;
@@ -122,7 +134,8 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         if (existing == null) {
             return false;
         }
-        boolean changed = !java.util.Objects.equals(existing.getDate(), examSchedule.getDate())
+        boolean changed = (examSchedule.isOnline() && !existing.isOnline())
+                || !java.util.Objects.equals(existing.getDate(), examSchedule.getDate())
                 || !java.util.Objects.equals(existing.getStartTime(), examSchedule.getStartTime())
                 || !java.util.Objects.equals(existing.getEndTime(), examSchedule.getEndTime())
                 || classroomId(existing) != classroomId(examSchedule);

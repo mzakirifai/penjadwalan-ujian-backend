@@ -23,7 +23,8 @@ import java.util.TreeSet;
  * Mengubah baris Excel menjadi Jadwal Ujian + validasi (aturannya sama dengan form Jadwal Ujian).
  *
  * Kolom: Tanggal | Jam Mulai | Jam Selesai | Kelas | Kode Mapel | Mapel | Kode Guru | Jenis Ujian | Semester
- *        | Tahun Akademik | Keterangan   (satu baris = satu mapel diujikan di satu kelas)
+ *        | Tahun Akademik | Mode Ujian | Keterangan   (satu baris = satu mapel diujikan di satu kelas)
+ * - Mode Ujian: Offline (di ruangan, default bila kosong) atau Online (tanpa ruangan & pengawas).
  * - Tanggal: 2026-11-30 atau 30/11/2026 atau 30-11-2026. Jam: 07:00 atau 07.00.
  * - Mapel dicari lewat Kode Mapel; bila kosong lewat nama mapel (harus tepat satu). Harus berlaku untuk kelasnya.
  * - Kode Guru wajib bila mapel + kelas itu punya pengampu berkode (pilihannya diambil dari data Pengampu);
@@ -33,7 +34,7 @@ import java.util.TreeSet;
 public class ExamScheduleImportParser {
 
     public static final List<String> COLUMNS = List.of("Tanggal", "Jam Mulai", "Jam Selesai", "Kelas", "Kode Mapel",
-            "Mapel", "Kode Guru", "Jenis Ujian", "Semester", "Tahun Akademik", "Keterangan");
+            "Mapel", "Kode Guru", "Jenis Ujian", "Semester", "Tahun Akademik", "Mode Ujian", "Keterangan");
     public static final List<String> REQUIRED = List.of("date", "startTime", "endTime", "classroom");
     public static final Map<String, List<String>> ALIASES = new LinkedHashMap<>();
 
@@ -48,6 +49,7 @@ public class ExamScheduleImportParser {
         ALIASES.put("examType", List.of("jenisujian", "jenis", "ujian"));
         ALIASES.put("semester", List.of("semester"));
         ALIASES.put("academicYear", List.of("tahunakademik", "tahunajaran", "tahunpelajaran", "tahun"));
+        ALIASES.put("mode", List.of("modeujian", "mode", "pelaksanaan", "onlineoffline"));
         ALIASES.put("notes", List.of("keterangan", "catatan"));
     }
 
@@ -111,6 +113,8 @@ public class ExamScheduleImportParser {
             String semester = capitalize(row.get("semester").trim());
             String academicYear = row.get("academicYear").replaceAll("\\s+", "");
             String notes = row.get("notes").trim();
+            String modeText = row.get("mode").trim();
+            String mode = normalizeMode(modeText);
 
             if (dateText.isEmpty() && classroomName.isEmpty() && subjectCode.isEmpty() && subjectName.isEmpty()) {
                 continue;
@@ -150,6 +154,8 @@ public class ExamScheduleImportParser {
                 error = "Semester harus Ganjil atau Genap";
             } else if (!academicYear.matches("\\d{4}/\\d{4}")) {
                 error = "Tahun Akademik harus seperti 2026/2027";
+            } else if (mode == null) {
+                error = "Mode Ujian harus Offline atau Online (kosong = Offline)";
             } else if (classroomName.isEmpty()) {
                 error = "Kelas kosong";
             } else if (classroom == null) {
@@ -189,6 +195,7 @@ public class ExamScheduleImportParser {
             schedule.setSubject(subject);
             schedule.setTeacherCode(teacherCode);
             schedule.setNotes(notes.isEmpty() ? null : notes);
+            schedule.setMode(mode);
 
             if (error == null) {
                 for (ExamSchedule other : accepted) {
@@ -204,6 +211,10 @@ public class ExamScheduleImportParser {
                     Integer otherRow = fileRowOf.get(other);
                     if (overlap && samePeriod && sameSubject && start.equals(other.getStartTime())
                             && end.equals(other.getEndTime())) {
+                        if (otherRow == null && other.isOnline() != schedule.isOnline()) {
+                            error = "Sudah terdaftar sebagai " + other.getMode() + "; ubah mode lewat tombol Mode Ujian";
+                            break;
+                        }
                         error = otherRow == null ? "Sudah terdaftar, dilewati" : "Baris ganda di file (baris " + otherRow + ")";
                         break;
                     }
@@ -232,10 +243,23 @@ public class ExamScheduleImportParser {
                             subject != null && subject.getCode() != null ? subject.getCode() : subjectCode,
                             subject != null ? subject.getName() : subjectName,
                             teacherCode != null ? String.valueOf(teacherCode) : "-",
-                            examType, semester, academicYear, notes.isEmpty() ? "-" : notes),
+                            examType, semester, academicYear, mode == null ? modeText : mode,
+                            notes.isEmpty() ? "-" : notes),
                     schedule, error, error == null ? warning : null));
         }
         return result;
+    }
+
+    /** Offline/Online; kosong = Offline; null bila tidak dikenali. */
+    static String normalizeMode(String text) {
+        String t = text.replaceAll("[\\s-]", "").toLowerCase(Locale.ROOT);
+        if (t.isEmpty() || t.equals("offline") || t.equals("luring") || t.equals("tatapmuka") || t.equals("ruangan")) {
+            return ExamSchedule.MODE_OFFLINE;
+        }
+        if (t.equals("online") || t.equals("daring")) {
+            return ExamSchedule.MODE_ONLINE;
+        }
+        return null;
     }
 
     private static String describe(ExamSchedule s) {

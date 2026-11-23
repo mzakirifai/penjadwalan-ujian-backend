@@ -27,6 +27,24 @@ public class ExamSchedule {
     private Teacher teacher;
     private Integer teacherCode; // kode guru pembuat soal, mis. 1 untuk DDPK TKJ (1); boleh kosong
 
+    /** Offline = di ruangan (ikut Penempatan Ruangan); Online = tanpa ruangan & pengawas. */
+    public static final String MODE_OFFLINE = "Offline";
+    public static final String MODE_ONLINE = "Online";
+    private String mode = MODE_OFFLINE;
+
+    public String getMode() {
+        return mode;
+    }
+
+    /** null/kosong dianggap Offline (perilaku lama). */
+    public void setMode(String mode) {
+        this.mode = MODE_ONLINE.equalsIgnoreCase(mode == null ? "" : mode.trim()) ? MODE_ONLINE : MODE_OFFLINE;
+    }
+
+    public boolean isOnline() {
+        return MODE_ONLINE.equals(mode);
+    }
+
     public ExamSchedule() {
     }
 
