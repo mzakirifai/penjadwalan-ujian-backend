@@ -269,7 +269,7 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                 throw exception;
             }
         } catch (Exception exception) {
-            throw new IllegalStateException("Import siswa gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
+            throw new IllegalStateException("Impor siswa gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
         }
     }
 
@@ -348,7 +348,7 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                 connection.setAutoCommit(true);
             }
         } catch (Exception exception) {
-            throw new IllegalStateException("Import status administrasi gagal, tidak ada data yang diubah: "
+            throw new IllegalStateException("Impor status administrasi gagal, tidak ada data yang diubah: "
                     + exception.getMessage(), exception);
         }
     }

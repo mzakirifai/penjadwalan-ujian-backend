@@ -146,8 +146,8 @@ public class TeachingAssignmentImportParser {
                 error = "Kode Mapel / Mapel kosong";
             } else if (subject == null) {
                 error = !subjectCode.isEmpty()
-                        ? "Kode Mapel " + subjectCode + " tidak ditemukan (import Mapel dulu)"
-                        : "Mapel \"" + subjectName + "\" tidak ditemukan (import Mapel dulu)";
+                        ? "Kode Mapel " + subjectCode + " tidak ditemukan (impor Mapel dulu)"
+                        : "Mapel \"" + subjectName + "\" tidak ditemukan (impor Mapel dulu)";
             } else if (classroomName.isEmpty()) {
                 error = "Kelas kosong";
             } else if (classroom == null) {

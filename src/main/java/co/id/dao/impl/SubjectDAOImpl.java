@@ -292,7 +292,7 @@ public class SubjectDAOImpl extends DatabaseConfiguration implements SubjectDAO{
                 connection.setAutoCommit(true);
             }
         } catch (Exception exception) {
-            throw new IllegalStateException("Import mapel gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
+            throw new IllegalStateException("Impor mapel gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
         }
     }
 

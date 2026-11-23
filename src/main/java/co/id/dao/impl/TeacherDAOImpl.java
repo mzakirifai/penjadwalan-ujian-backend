@@ -192,7 +192,7 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
                 throw exception;
             }
         } catch (Exception exception) {
-            throw new IllegalStateException("Import guru gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
+            throw new IllegalStateException("Impor guru gagal, tidak ada data yang disimpan: " + exception.getMessage(), exception);
         }
     }
 
