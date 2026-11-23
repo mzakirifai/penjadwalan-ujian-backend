@@ -259,12 +259,31 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
         plan.getRooms().addAll(RoomMixer.mix(groups, ordered, plan.getWarnings()));
 
         // 3. nomor peserta: pakai yang sudah ada; siswa baru diberi nomor berikutnya (3 digit) per jadwal
+        assignParticipantNumbers(plan, existingRows, rowsBySchedule);
+
+        // 4. catatan untuk admin
+        if (plan.getRooms().size() < rooms.size()) {
+            plan.getWarnings().add("Hanya " + plan.getRooms().size() + " dari " + rooms.size()
+                    + " ruangan terpilih yang dipakai; sisanya tidak diperlukan.");
+        }
+        int classCount = (int) groups.stream().map(g -> g.getSchedule().getClassroom() == null ? 0 : g.getSchedule().getClassroom().getId()).distinct().count();
+        for (RoomAssignment assignment : plan.getRooms()) {
+            if (classCount > 1 && assignment.getClassCounts().size() == 1) {
+                plan.getWarnings().add("Ruangan " + assignment.getRoom().getName() + " hanya berisi satu kelas ("
+                        + assignment.describeClasses() + ").");
+            }
+        }
+        return plan;
+    }
+
+    // Nomor peserta: pakai yang sudah ada; siswa baru diberi nomor berikutnya (3 digit) per jadwal
+    private void assignParticipantNumbers(RoomPlan plan, List<SeatRow> existingRows, Map<Integer, List<SeatRow>> rowsBySchedule) {
         Map<String, SeatRow> existingByKey = new HashMap<>();
         for (SeatRow row : existingRows) {
             existingByKey.put(row.scheduleId + ":" + row.studentId, row);
         }
         Map<Integer, Integer> nextNumber = new HashMap<>();
-        for (ExamSchedule schedule : schedules) {
+        for (ExamSchedule schedule : plan.getSchedules()) {
             int max = 0;
             for (SeatRow row : rowsBySchedule.getOrDefault(schedule.getId(), List.of())) {
                 try {
@@ -287,20 +306,245 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
                 }
             }
         }
+    }
 
-        // 4. catatan untuk admin
-        if (plan.getRooms().size() < rooms.size()) {
-            plan.getWarnings().add("Hanya " + plan.getRooms().size() + " dari " + rooms.size()
-                    + " ruangan terpilih yang dipakai; sisanya tidak diperlukan.");
-        }
-        int classCount = (int) groups.stream().map(g -> g.getSchedule().getClassroom() == null ? 0 : g.getSchedule().getClassroom().getId()).distinct().count();
-        for (RoomAssignment assignment : plan.getRooms()) {
-            if (classCount > 1 && assignment.getClassCounts().size() == 1) {
-                plan.getWarnings().add("Ruangan " + assignment.getRoom().getName() + " hanya berisi satu kelas ("
-                        + assignment.describeClasses() + ").");
+    // ------------------------------------------------------------------ penempatan manual
+
+    @Override
+    public List<ExamSession> getSessionsInPeriod(String examType, String semester, String academicYear) {
+        // tanggal + jam unik dari jadwal offline periode ini, lalu sesi lengkapnya (semua jadwal offline di jam itu)
+        Map<String, ExamSchedule> slots = new LinkedHashMap<>();
+        examScheduleDAO.getAllExamSchedulesDetailed().stream()
+                .filter(s -> !s.isOnline() && s.getDate() != null && s.getStartTime() != null && s.getEndTime() != null)
+                .filter(s -> java.util.Objects.equals(examType, s.getExamType()) && java.util.Objects.equals(semester, s.getSemester())
+                        && java.util.Objects.equals(academicYear, s.getAcademicYear()))
+                .sorted(Comparator.comparing(ExamSchedule::getDate).thenComparing(ExamSchedule::getStartTime)
+                        .thenComparing(ExamSchedule::getEndTime))
+                .forEach(s -> slots.putIfAbsent(s.getDate() + " " + s.getStartTime() + "-" + s.getEndTime(), s));
+        Map<LocalDate, List<ExamSession>> byDate = new HashMap<>();
+        List<ExamSession> result = new ArrayList<>();
+        for (ExamSchedule slot : slots.values()) {
+            for (ExamSession session : byDate.computeIfAbsent(slot.getDate(), this::getSessions)) {
+                if (session.getStartTime().equals(slot.getStartTime()) && session.getEndTime().equals(slot.getEndTime())) {
+                    result.add(session);
+                }
             }
         }
+        return result;
+    }
+
+    @Override
+    public Map<Integer, Integer> getStudentCounts(ExamSession session) {
+        List<Integer> scheduleIds = session.getSchedules().stream().map(ExamSchedule::getId).collect(Collectors.toList());
+        Map<Integer, List<SeatRow>> rowsBySchedule = roomAllocationDAO.getSeatRows(scheduleIds).stream()
+                .collect(Collectors.groupingBy(r -> r.scheduleId));
+        Map<Integer, Integer> counts = new LinkedHashMap<>();
+        for (ExamSchedule schedule : session.getSchedules()) {
+            counts.put(schedule.getId(), studentsOf(schedule, rowsBySchedule.getOrDefault(schedule.getId(), List.of())).size());
+        }
+        return counts;
+    }
+
+    @Override
+    public RoomPlan buildManual(ExamSession session, Map<Integer, Map<Integer, Integer>> distribution, List<Room> rooms) {
+        Map<Integer, Room> roomById = new LinkedHashMap<>();
+        for (Room room : rooms) {
+            roomById.put(room.getId(), room);
+        }
+        List<ExamSchedule> schedules = session.getSchedules();
+        List<Integer> scheduleIds = schedules.stream().map(ExamSchedule::getId).collect(Collectors.toList());
+        List<SeatRow> existingRows = roomAllocationDAO.getSeatRows(scheduleIds);
+        Map<Integer, List<SeatRow>> rowsBySchedule = existingRows.stream().collect(Collectors.groupingBy(r -> r.scheduleId));
+
+        RoomPlan plan = new RoomPlan(session.getDate(), session.getStartTime(), session.getEndTime(), schedules);
+        Map<Integer, RoomAssignment> assignments = new LinkedHashMap<>();
+        for (Room room : rooms) {
+            assignments.put(room.getId(), new RoomAssignment(room));
+        }
+
+        for (ExamSchedule schedule : schedules) {
+            List<Student> students = new ArrayList<>(studentsOf(schedule,
+                    rowsBySchedule.getOrDefault(schedule.getId(), List.of())).values());
+            students.sort(Comparator.comparing(s -> s.getName() == null ? "" : s.getName(), String.CASE_INSENSITIVE_ORDER));
+            String label = (schedule.getClassroom() != null ? schedule.getClassroom().getName() : "-") + " - "
+                    + schedule.getSubjectLabel();
+            int next = 0;
+            for (Map.Entry<Integer, Integer> entry : distribution.getOrDefault(schedule.getId(), Map.of()).entrySet()) {
+                int count = entry.getValue() == null ? 0 : entry.getValue();
+                if (count < 0) {
+                    throw new IllegalArgumentException("Jumlah siswa tidak boleh negatif (" + label + ").");
+                }
+                RoomAssignment target = assignments.get(entry.getKey());
+                if (target == null && count > 0) {
+                    throw new IllegalArgumentException("Ruangan untuk " + label + " tidak ada di daftar ruangan terpilih.");
+                }
+                if (next + count > students.size()) {
+                    throw new IllegalArgumentException(label + ": dibagi " + (next + count) + " siswa, padahal hanya "
+                            + students.size() + " siswa.");
+                }
+                for (int i = 0; i < count; i++) {
+                    target.getSeats().add(new SeatAssignment(target.getSeats().size() + 1, students.get(next++), schedule));
+                }
+            }
+            if (next < students.size()) {
+                plan.getWarnings().add((students.size() - next) + " siswa " + label + " belum mendapat ruangan.");
+            }
+        }
+
+        for (RoomAssignment assignment : assignments.values()) {
+            if (assignment.getFilled() == 0) {
+                continue;
+            }
+            RoomMixer.arrangeSeats(assignment);
+            plan.getRooms().add(assignment);
+            if (assignment.getFilled() > assignment.getRoom().getCapacity()) {
+                plan.getWarnings().add("Ruangan " + assignment.getRoom().getName() + " berisi " + assignment.getFilled()
+                        + " siswa, melebihi kapasitas " + assignment.getRoom().getCapacity() + ".");
+            }
+        }
+        if (plan.getRooms().isEmpty()) {
+            throw new IllegalStateException("Belum ada siswa yang ditempatkan ke ruangan.");
+        }
+        assignParticipantNumbers(plan, existingRows, rowsBySchedule);
         return plan;
+    }
+
+    @Override
+    public void moveSeat(RoomPlan plan, SeatAssignment seat, Room target) {
+        RoomAssignment from = null;
+        for (RoomAssignment assignment : plan.getRooms()) {
+            if (assignment.getSeats().contains(seat)) {
+                from = assignment;
+            }
+        }
+        if (from == null) {
+            throw new IllegalArgumentException("Siswa tidak ditemukan di penempatan ini.");
+        }
+        if (from.getRoom().getId() == target.getId()) {
+            return;
+        }
+        RoomAssignment to = null;
+        for (RoomAssignment assignment : plan.getRooms()) {
+            if (assignment.getRoom().getId() == target.getId()) {
+                to = assignment;
+            }
+        }
+        if (to == null) {
+            to = new RoomAssignment(target);
+            plan.getRooms().add(to);
+        }
+        if (to.getFilled() >= target.getCapacity()) {
+            throw new IllegalStateException("Ruangan " + target.getName() + " sudah penuh (" + target.getCapacity() + " kursi).");
+        }
+        from.getSeats().remove(seat);
+        to.getSeats().add(seat);
+        rearrange(from);
+        rearrange(to);
+        if (from.getFilled() == 0) {
+            plan.getRooms().remove(from);
+        }
+    }
+
+    // Susun ulang kursi satu ruangan (urut nama per jadwal, disebar), nomor peserta tetap
+    private static void rearrange(RoomAssignment assignment) {
+        Map<String, SeatAssignment> before = new HashMap<>();
+        for (SeatAssignment seat : assignment.getSeats()) {
+            before.put(seat.getSchedule().getId() + ":" + seat.getStudent().getId(), seat);
+        }
+        assignment.getSeats().sort(Comparator.comparing(
+                (SeatAssignment s) -> s.getStudent().getName() == null ? "" : s.getStudent().getName(),
+                String.CASE_INSENSITIVE_ORDER));
+        RoomMixer.arrangeSeats(assignment);
+        for (SeatAssignment seat : assignment.getSeats()) {
+            SeatAssignment old = before.get(seat.getSchedule().getId() + ":" + seat.getStudent().getId());
+            if (old != null) {
+                seat.setParticipantId(old.getParticipantId());
+                seat.setParticipantNumber(old.getParticipantNumber());
+            }
+        }
+    }
+
+    @Override
+    public List<String> applyLayout(RoomPlan source, List<ExamSession> targets, String currentUsername, String currentUserRole) {
+        if (!"admin".equalsIgnoreCase(currentUserRole)) {
+            throw new SecurityException("Hanya admin yang boleh mengatur penempatan ruangan.");
+        }
+        // pola: kelas -> (ruangan -> jumlah siswa), urutan ruangan sesuai rencana sumber
+        Map<Integer, LinkedHashMap<Integer, Integer>> pattern = new LinkedHashMap<>();
+        Map<Integer, Room> roomById = new LinkedHashMap<>();
+        for (RoomAssignment assignment : source.getRooms()) {
+            roomById.put(assignment.getRoom().getId(), assignment.getRoom());
+            for (SeatAssignment seat : assignment.getSeats()) {
+                if (seat.getSchedule().getClassroom() == null) {
+                    continue;
+                }
+                pattern.computeIfAbsent(seat.getSchedule().getClassroom().getId(), k -> new LinkedHashMap<>())
+                        .merge(assignment.getRoom().getId(), 1, Integer::sum);
+            }
+        }
+        List<Room> rooms = new ArrayList<>(roomById.values());
+        java.time.format.DateTimeFormatter dateFormat = java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+        List<String> report = new ArrayList<>();
+        for (ExamSession target : targets) {
+            String name = target.getDate().format(dateFormat) + " " + target.getStartTime() + "-" + target.getEndTime();
+            if (target.getDate().equals(source.getDate()) && target.getStartTime().equals(source.getStartTime())
+                    && target.getEndTime().equals(source.getEndTime())) {
+                continue;
+            }
+            try {
+                Map<Integer, Integer> sizes = getStudentCounts(target);
+                Map<Integer, Map<Integer, Integer>> distribution = new LinkedHashMap<>();
+                List<String> notes = new ArrayList<>();
+                for (ExamSchedule schedule : target.getSchedules()) {
+                    int size = sizes.getOrDefault(schedule.getId(), 0);
+                    LinkedHashMap<Integer, Integer> classPattern = schedule.getClassroom() == null ? null
+                            : pattern.get(schedule.getClassroom().getId());
+                    if (size == 0) {
+                        continue;
+                    }
+                    if (classPattern == null) {
+                        notes.add(schedule.getClassroom().getName() + " tidak ada di susunan sumber, belum ditempatkan");
+                        continue;
+                    }
+                    distribution.put(schedule.getId(), fit(classPattern, size));
+                }
+                if (distribution.isEmpty()) {
+                    report.add("DILEWATI " + name + ": tidak ada kelas yang cocok dengan susunan sumber.");
+                    continue;
+                }
+                RoomPlan plan = buildManual(target, distribution, rooms);
+                Map<Integer, Teacher> supervisors = roomAllocationDAO.getSupervisors(target.getDate(),
+                        target.getStartTime(), target.getEndTime());
+                for (RoomAssignment assignment : plan.getRooms()) {
+                    assignment.setSupervisor(supervisors.get(assignment.getRoom().getId()));
+                }
+                save(plan, currentUsername, currentUserRole);
+                report.add("OK " + name + ": " + plan.getTotalStudents() + " siswa di " + plan.getRooms().size()
+                        + " ruangan" + (notes.isEmpty() ? "" : " (" + String.join("; ", notes) + ")"));
+            } catch (Exception ex) {
+                report.add("DILEWATI " + name + ": " + ex.getMessage());
+            }
+        }
+        return report;
+    }
+
+    // Sesuaikan pola jumlah per ruangan dengan jumlah siswa kelas di sesi tujuan (selisih ditambah/dikurangi di ruangan terakhir)
+    private static Map<Integer, Integer> fit(LinkedHashMap<Integer, Integer> classPattern, int size) {
+        LinkedHashMap<Integer, Integer> result = new LinkedHashMap<>(classPattern);
+        int total = result.values().stream().mapToInt(Integer::intValue).sum();
+        List<Integer> keys = new ArrayList<>(result.keySet());
+        int diff = size - total;
+        for (int i = keys.size() - 1; i >= 0 && diff != 0; i--) {
+            int current = result.get(keys.get(i));
+            int changed = Math.max(0, current + diff);
+            diff -= changed - current;
+            result.put(keys.get(i), changed);
+            if (diff > 0) {
+                break;
+            }
+        }
+        return result;
     }
 
     @Override

@@ -13,6 +13,29 @@ public interface RoomAllocationService {
     /** Sesi ujian Online pada tanggal itu (dikelompokkan per jam yang sama); tidak memakai ruangan. */
     public List<ExamSession> getOnlineSessions(LocalDate date);
 
+    /** Sesi offline (ruangan) yang memuat jadwal periode ini: jenis ujian + semester + tahun akademik. */
+    public List<ExamSession> getSessionsInPeriod(String examType, String semester, String academicYear);
+
+    /** Jumlah siswa yang perlu kursi per jadwal (id jadwal -> jumlah), sama dengan hitungan mode otomatis. */
+    public java.util.Map<Integer, Integer> getStudentCounts(ExamSession session);
+
+    /**
+     * Penempatan manual. distribution: id jadwal -> (id ruangan -> jumlah siswa), urutan ruangan = urutan pengisian.
+     * Siswa tiap jadwal diurut nama lalu dibagi sesuai jumlah; kursi di tiap ruangan disebar seperti mode otomatis.
+     */
+    public RoomPlan buildManual(ExamSession session, java.util.Map<Integer, java.util.Map<Integer, Integer>> distribution,
+                                List<Room> rooms);
+
+    /** Pindahkan satu siswa ke ruangan lain di rencana ini (kursi kedua ruangan disusun ulang, nomor peserta tetap). */
+    public void moveSeat(RoomPlan plan, co.id.model.SeatAssignment seat, Room target);
+
+    /**
+     * Terapkan susunan kelas -> ruangan dari rencana sumber ke sesi-sesi lain, lalu langsung disimpan.
+     * Pengawas sesi tujuan yang sudah ada dipertahankan untuk ruangan yang sama.
+     * @return satu baris hasil per sesi (berhasil / dilewati beserta alasannya)
+     */
+    public List<String> applyLayout(RoomPlan source, List<ExamSession> targets, String currentUsername, String currentUserRole);
+
     /** Semua ruangan beserta keterangan bila sedang dipakai sesi lain yang waktunya bertumpuk. */
     public List<co.id.model.RoomAvailability> getRoomAvailability(ExamSession session);
     /** Jumlah kursi yang dibutuhkan sesi ini (seluruh siswa kelas + peserta terdaftar per jadwal). */

@@ -188,7 +188,7 @@ public class RoomMixer {
      * Susun ulang kursi satu ruangan. Siswa dikelompokkan per jadwal (urutan nama di dalam jadwal tidak berubah),
      * lalu urutan jadwal per kursi diambil dari {@link #spreadOrder}.
      */
-    static void arrangeSeats(RoomAssignment assignment) {
+    public static void arrangeSeats(RoomAssignment assignment) {
         Map<Integer, List<SeatAssignment>> bySchedule = new LinkedHashMap<>();
         Map<Integer, ExamSchedule> schedules = new LinkedHashMap<>();
         for (SeatAssignment seat : assignment.getSeats()) {
