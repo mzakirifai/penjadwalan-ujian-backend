@@ -17,6 +17,10 @@ public class RoomAttendanceReportItem {
     private String nis;
     private String studentName;
     private String className;
+    // Judul yang berbeda untuk daftar hadir ujian online (per kelas, tanpa ruangan & kursi)
+    private String seatHeader = "No Kursi";
+    private String supervisorTitle = "Pengawas";
+    private String signerTitle = "Pengawas Ruang";
 
     public RoomAttendanceReportItem() {
     }
@@ -52,6 +56,15 @@ public class RoomAttendanceReportItem {
 
     public String getStudentName() { return studentName; }
     public void setStudentName(String studentName) { this.studentName = studentName; }
+
+    public String getSeatHeader() { return seatHeader; }
+    public void setSeatHeader(String seatHeader) { this.seatHeader = seatHeader; }
+
+    public String getSupervisorTitle() { return supervisorTitle; }
+    public void setSupervisorTitle(String supervisorTitle) { this.supervisorTitle = supervisorTitle; }
+
+    public String getSignerTitle() { return signerTitle; }
+    public void setSignerTitle(String signerTitle) { this.signerTitle = signerTitle; }
 
     public String getClassName() { return className; }
     public void setClassName(String className) { this.className = className; }

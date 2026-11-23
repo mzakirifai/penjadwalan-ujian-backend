@@ -44,10 +44,19 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
 
     @Override
     public List<ExamSession> getSessions(LocalDate date) {
+        return groupSessions(date, false); // ujian online tidak memakai ruangan
+    }
+
+    @Override
+    public List<ExamSession> getOnlineSessions(LocalDate date) {
+        return groupSessions(date, true);
+    }
+
+    private List<ExamSession> groupSessions(LocalDate date, boolean online) {
         Map<String, List<ExamSchedule>> grouped = new LinkedHashMap<>();
         examScheduleDAO.getAllExamSchedulesDetailed().stream()
                 .filter(s -> date.equals(s.getDate()) && s.getStartTime() != null && s.getEndTime() != null)
-                .filter(s -> !s.isOnline()) // ujian online tidak memakai ruangan
+                .filter(s -> s.isOnline() == online)
                 .sorted(Comparator.comparing(ExamSchedule::getStartTime).thenComparing(ExamSchedule::getEndTime)
                         .thenComparingInt(ExamSchedule::getId))
                 .forEach(s -> grouped.computeIfAbsent(s.getStartTime() + "-" + s.getEndTime(), k -> new ArrayList<>()).add(s));

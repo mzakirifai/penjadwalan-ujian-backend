@@ -112,4 +112,67 @@ public class ReportServiceImpl implements ReportService {
         }
         return items;
     }
+
+    @Override
+    public List<RoomAttendanceReportItem> getOnlineAttendanceReport(List<co.id.model.ExamSchedule> schedules, Integer scheduleId) {
+        List<RoomAttendanceReportItem> items = new ArrayList<>();
+        if (schedules == null || schedules.isEmpty()) {
+            return items;
+        }
+        co.id.service.ExamParticipantService participantService = new co.id.service.impl.ExamParticipantServiceImpl();
+        List<co.id.model.TeachingAssignment> assignments =
+                new co.id.service.impl.TeachingAssignmentServiceImpl().getAllTeachingAssignments();
+
+        List<co.id.model.ExamSchedule> sorted = new ArrayList<>(schedules);
+        sorted.sort(java.util.Comparator.comparing((co.id.model.ExamSchedule s) -> s.getClassroom().getName())
+                .thenComparing(s -> s.getSubject() != null ? s.getSubject().getName() : ""));
+        for (co.id.model.ExamSchedule schedule : sorted) {
+            if (scheduleId != null && schedule.getId() != scheduleId) {
+                continue;
+            }
+            List<co.id.model.ExamParticipant> participants = new ArrayList<>(participantService.getByExamSchedule(schedule.getId()));
+            participants.sort(java.util.Comparator.comparing(
+                    (co.id.model.ExamParticipant p) -> p.getParticipantNumber() == null ? "" : p.getParticipantNumber())
+                    .thenComparing(p -> p.getStudent().getName(), String.CASE_INSENSITIVE_ORDER));
+            Teacher teacher = subjectTeacherOf(schedule, assignments);
+            String classSummary = schedule.getClassroom().getName()
+                    + (schedule.getSubject() != null ? " - " + schedule.getSubjectLabel() : "");
+            for (co.id.model.ExamParticipant participant : participants) {
+                RoomAttendanceReportItem item = new RoomAttendanceReportItem();
+                item.setRoomKey("ONLINE-" + schedule.getId());
+                item.setRoomName("Online");
+                item.setClassSummary(classSummary);
+                item.setSupervisorTitle("Guru Mapel");
+                item.setSignerTitle("Guru Mata Pelajaran");
+                item.setSupervisorName(teacher != null ? teacher.getName() : null);
+                item.setSupervisorNip(teacher != null ? teacher.getNip() : null);
+                item.setTotalStudents(String.valueOf(participants.size()));
+                item.setSeatHeader("No Peserta");
+                item.setSeatLabel(participant.getParticipantNumber());
+                item.setParticipantNumber(participant.getParticipantNumber());
+                item.setNis(participant.getStudent().getNis());
+                item.setStudentName(participant.getStudent().getName());
+                item.setClassName(schedule.getClassroom().getName());
+                items.add(item);
+            }
+        }
+        return items;
+    }
+
+    /** Guru pengampu mapel di kelas itu (sesuai kode guru jadwal); null bila tidak ada / tidak bisa dipastikan. */
+    private static Teacher subjectTeacherOf(co.id.model.ExamSchedule schedule, List<co.id.model.TeachingAssignment> assignments) {
+        if (schedule.getSubject() == null || schedule.getClassroom() == null) {
+            return null;
+        }
+        List<co.id.model.TeachingAssignment> matches = new ArrayList<>();
+        for (co.id.model.TeachingAssignment ta : assignments) {
+            if (ta.getSubject() != null && ta.getClassroom() != null && ta.getTeacher() != null
+                    && ta.getSubject().getId() == schedule.getSubject().getId()
+                    && ta.getClassroom().getId() == schedule.getClassroom().getId()
+                    && (schedule.getTeacherCode() == null || schedule.getTeacherCode().equals(ta.getTeacherCode()))) {
+                matches.add(ta);
+            }
+        }
+        return matches.size() == 1 ? matches.get(0).getTeacher() : null;
+    }
 }

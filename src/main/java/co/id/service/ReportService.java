@@ -35,4 +35,10 @@ public interface ReportService {
      * roomId null = semua ruangan di sesi itu (tiap ruangan dicetak di halaman baru).
      */
     public List<RoomAttendanceReportItem> getRoomAttendanceReport(RoomPlan plan, Integer roomId);
+
+    /**
+     * Daftar hadir ujian online: satu lembar per jadwal (kelas + mapel), tanpa ruangan dan kursi.
+     * scheduleId null = semua jadwal yang diberikan.
+     */
+    public List<RoomAttendanceReportItem> getOnlineAttendanceReport(List<co.id.model.ExamSchedule> schedules, Integer scheduleId);
 }

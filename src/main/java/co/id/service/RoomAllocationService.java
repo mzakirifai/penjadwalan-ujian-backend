@@ -10,6 +10,9 @@ public interface RoomAllocationService {
     /** Sesi ujian pada tanggal tersebut (jadwal dengan jam mulai-selesai yang sama dijadikan satu sesi). */
     public List<ExamSession> getSessions(LocalDate date);
 
+    /** Sesi ujian Online pada tanggal itu (dikelompokkan per jam yang sama); tidak memakai ruangan. */
+    public List<ExamSession> getOnlineSessions(LocalDate date);
+
     /** Semua ruangan beserta keterangan bila sedang dipakai sesi lain yang waktunya bertumpuk. */
     public List<co.id.model.RoomAvailability> getRoomAvailability(ExamSession session);
     /** Jumlah kursi yang dibutuhkan sesi ini (seluruh siswa kelas + peserta terdaftar per jadwal). */
