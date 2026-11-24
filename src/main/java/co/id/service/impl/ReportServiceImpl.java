@@ -94,20 +94,34 @@ public class ReportServiceImpl implements ReportService {
             }
             String supervisorName = room.getSupervisor() != null ? room.getSupervisor().getName() : null;
             String supervisorNip = room.getSupervisor() != null ? room.getSupervisor().getNip() : null;
+
+            // Satu ruangan bisa berisi beberapa kelas yang duduknya dicampur. Daftar hadir dibuat
+            // satu lembar per kelas di ruangan itu (urut kelas, lalu nama siswa) supaya tidak membingungkan.
+            java.util.Map<String, List<SeatAssignment>> byClass = new java.util.TreeMap<>();
             for (SeatAssignment seat : room.getSeats()) {
-                RoomAttendanceReportItem item = new RoomAttendanceReportItem();
-                item.setRoomKey(String.valueOf(room.getRoom().getId()));
-                item.setRoomName(room.getRoom().getName());
-                item.setClassSummary(room.describeClasses());
-                item.setSupervisorName(supervisorName);
-                item.setSupervisorNip(supervisorNip);
-                item.setTotalStudents(String.valueOf(room.getFilled()));
-                item.setSeatLabel(seat.getSeatLabel());
-                item.setParticipantNumber(seat.getParticipantNumber());
-                item.setNis(seat.getStudent().getNis());
-                item.setStudentName(seat.getStudent().getName());
-                item.setClassName(seat.getClassName());
-                items.add(item);
+                byClass.computeIfAbsent(seat.getClassName() == null ? "-" : seat.getClassName(), k -> new ArrayList<>()).add(seat);
+            }
+            for (java.util.Map.Entry<String, List<SeatAssignment>> group : byClass.entrySet()) {
+                List<SeatAssignment> seats = group.getValue();
+                seats.sort(java.util.Comparator.comparing((SeatAssignment s) -> s.getStudent().getName() == null ? "" : s.getStudent().getName(),
+                        String.CASE_INSENSITIVE_ORDER).thenComparing(SeatAssignment::getSeatIndex));
+                co.id.model.ExamSchedule schedule = seats.get(0).getSchedule();
+                String subject = schedule != null && schedule.getSubject() != null ? " - " + schedule.getSubjectLabel() : "";
+                for (SeatAssignment seat : seats) {
+                    RoomAttendanceReportItem item = new RoomAttendanceReportItem();
+                    item.setRoomKey(room.getRoom().getId() + "|" + group.getKey());
+                    item.setRoomName(room.getRoom().getName());
+                    item.setClassSummary(group.getKey() + subject);
+                    item.setSupervisorName(supervisorName);
+                    item.setSupervisorNip(supervisorNip);
+                    item.setTotalStudents(String.valueOf(seats.size()));
+                    item.setSeatLabel(seat.getSeatLabel());
+                    item.setParticipantNumber(seat.getParticipantNumber());
+                    item.setNis(seat.getStudent().getNis());
+                    item.setStudentName(seat.getStudent().getName());
+                    item.setClassName(seat.getClassName());
+                    items.add(item);
+                }
             }
         }
         return items;

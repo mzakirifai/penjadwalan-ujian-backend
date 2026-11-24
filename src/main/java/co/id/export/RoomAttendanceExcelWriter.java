@@ -27,8 +27,9 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
- * Daftar hadir per ruangan (satu sheet per ruangan, semua kelas di ruangan itu dalam satu tabel) dan
- * satu sheet ringkasan: isi tiap ruangan serta naskah soal per kelas.
+ * Daftar hadir per ruangan per kelas (satu sheet untuk tiap kelas di tiap ruangan, urut nama siswa;
+ * ruangan yang berisi campuran kelas mendapat beberapa sheet) dan satu sheet ringkasan:
+ * isi tiap ruangan serta naskah soal per kelas.
  */
 public class RoomAttendanceExcelWriter {
 
@@ -43,7 +44,10 @@ public class RoomAttendanceExcelWriter {
             Set<String> usedNames = new HashSet<>();
             usedNames.add("Ringkasan");
             for (RoomAssignment room : plan.getRooms()) {
-                writeRoom(workbook, styles, plan, room, uniqueSheetName(room.getRoom().getName(), usedNames));
+                for (Map.Entry<String, java.util.List<SeatAssignment>> group : seatsByClass(room).entrySet()) {
+                    writeRoom(workbook, styles, plan, room, group.getKey(), group.getValue(),
+                            uniqueSheetName(room.getRoom().getName() + " " + group.getKey(), usedNames));
+                }
             }
 
             try (FileOutputStream out = new FileOutputStream(file)) {
@@ -101,7 +105,22 @@ public class RoomAttendanceExcelWriter {
         }
     }
 
-    private static void writeRoom(Workbook workbook, Styles s, RoomPlan plan, RoomAssignment room, String sheetName) {
+    /** Kursi di satu ruangan dikelompokkan per kelas (urut nama kelas), di dalamnya urut nama siswa. */
+    private static Map<String, java.util.List<SeatAssignment>> seatsByClass(RoomAssignment room) {
+        Map<String, java.util.List<SeatAssignment>> byClass = new java.util.TreeMap<>();
+        for (SeatAssignment seat : room.getSeats()) {
+            byClass.computeIfAbsent(seat.getClassName(), k -> new java.util.ArrayList<>()).add(seat);
+        }
+        for (java.util.List<SeatAssignment> seats : byClass.values()) {
+            seats.sort(java.util.Comparator.comparing(
+                    (SeatAssignment seat) -> seat.getStudent().getName() == null ? "" : seat.getStudent().getName(),
+                    String.CASE_INSENSITIVE_ORDER).thenComparing(SeatAssignment::getSeatIndex));
+        }
+        return byClass;
+    }
+
+    private static void writeRoom(Workbook workbook, Styles s, RoomPlan plan, RoomAssignment room,
+                                  String className, java.util.List<SeatAssignment> seats, String sheetName) {
         Sheet sheet = workbook.createSheet(sheetName);
         int r = 0;
         r = title(sheet, s, r, "DAFTAR HADIR PESERTA UJIAN", 7);
@@ -109,6 +128,9 @@ public class RoomAttendanceExcelWriter {
         r = line(sheet, s, r, "Waktu", plan.getStartTime().format(TIME) + " - " + plan.getEndTime().format(TIME));
         r = line(sheet, s, r, "Ruangan", room.getRoom().getName() + " (kapasitas " + room.getRoom().getCapacity() + ")");
         r = line(sheet, s, r, "Pengawas", room.getSupervisor() != null ? room.getSupervisor().getName() : "-");
+        ExamSchedule schedule = seats.get(0).getSchedule();
+        r = line(sheet, s, r, "Kelas", className
+                + (schedule != null && schedule.getSubject() != null ? " - " + schedule.getSubjectLabel() : ""));
         r++;
 
         String[] headers = {"No", "No. Kursi", "No. Peserta", "NIS", "Nama", "Kelas", "Tanda Tangan"};
@@ -118,7 +140,7 @@ public class RoomAttendanceExcelWriter {
         }
 
         int no = 1;
-        for (SeatAssignment seat : room.getSeats()) {
+        for (SeatAssignment seat : seats) {
             Row row = sheet.createRow(r++);
             row.setHeightInPoints(22);
             cell(row, 0, String.valueOf(no++), s.center);
@@ -131,7 +153,7 @@ public class RoomAttendanceExcelWriter {
         }
 
         r++;
-        r = line(sheet, s, r, "Jumlah peserta", String.valueOf(room.getFilled()));
+        r = line(sheet, s, r, "Jumlah peserta", String.valueOf(seats.size()));
         r = line(sheet, s, r, "Hadir / Tidak hadir", "........ / ........");
         r++;
         Row sign = sheet.createRow(r++);
