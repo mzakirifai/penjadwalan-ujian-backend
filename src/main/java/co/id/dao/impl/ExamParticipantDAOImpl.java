@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.ExamParticipantDAO;
 import co.id.model.ExamParticipant;
@@ -38,7 +39,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 participants.add(mapBasicResultSetToExamParticipant(resultSet));
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.getAllExamParticipants", exception);
         }
 
         return participants;
@@ -63,7 +64,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.getExamParticipantBy", exception);
         }
 
         return participants;
@@ -86,7 +87,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.getExamParticipants", exception);
         }
 
         return participants;
@@ -108,7 +109,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.getByExamSchedule", exception);
         }
 
         return participants;
@@ -130,7 +131,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.getByStudent", exception);
         }
 
         return participants;
@@ -148,7 +149,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 return resultSet.getInt("total");
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.countExamParticipants", exception);
         }
 
         return 0;
@@ -169,7 +170,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.countByExamSchedule", exception);
         }
 
         return 0;
@@ -190,7 +191,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.getById", exception);
         }
 
         return null;
@@ -288,7 +289,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.isParticipantNumberTaken", exception);
         }
 
         return false;
@@ -310,7 +311,7 @@ public class ExamParticipantDAOImpl extends DatabaseConfiguration implements Exa
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamParticipantDAOImpl.isStudentRegistered", exception);
         }
 
         return false;

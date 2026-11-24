@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.TeacherDAO;
 import co.id.model.Teacher;
@@ -26,7 +27,7 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
                 teachers.add(mapResultSetToTeacher(resultSet));
             }
         }catch(Exception exception){
-            exception.printStackTrace();
+            AppLog.error("TeacherDAOImpl.getAllTeachers", exception);
         }
 
         return teachers;
@@ -49,7 +50,7 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
                 }
             }
         }catch(Exception exception){
-            exception.printStackTrace();
+            AppLog.error("TeacherDAOImpl.getTeacherBy", exception);
         }
 
         return teachers;
@@ -72,7 +73,7 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
                 }
             }
         }catch(Exception exception){
-            exception.printStackTrace();
+            AppLog.error("TeacherDAOImpl.getTeachers", exception);
         }
 
         return teachers;
@@ -90,7 +91,7 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
                 return resultSet.getInt("total");
             }
         }catch(Exception exception){
-            exception.printStackTrace();
+            AppLog.error("TeacherDAOImpl.countTeachers", exception);
         }
 
         return 0;
@@ -111,7 +112,7 @@ public class TeacherDAOImpl extends DatabaseConfiguration implements TeacherDAO{
                 }
             }
         }catch(Exception exception){
-            exception.printStackTrace();
+            AppLog.error("TeacherDAOImpl.getById", exception);
         }
 
         return null;

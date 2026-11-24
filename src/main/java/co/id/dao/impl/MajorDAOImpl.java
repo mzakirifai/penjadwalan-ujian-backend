@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.MajorDAO;
 import co.id.model.Major;
@@ -26,7 +27,7 @@ public class MajorDAOImpl extends DatabaseConfiguration implements MajorDAO {
                 majors.add(mapResultSetToMajor(resultSet));
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("MajorDAOImpl.getAllMajors", exception);
         }
 
         return majors;
@@ -49,7 +50,7 @@ public class MajorDAOImpl extends DatabaseConfiguration implements MajorDAO {
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("MajorDAOImpl.getMajorBy", exception);
         }
 
         return majors;
@@ -72,7 +73,7 @@ public class MajorDAOImpl extends DatabaseConfiguration implements MajorDAO {
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("MajorDAOImpl.getMajors", exception);
         }
 
         return majors;
@@ -90,7 +91,7 @@ public class MajorDAOImpl extends DatabaseConfiguration implements MajorDAO {
                 return resultSet.getInt("total");
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("MajorDAOImpl.countMajors", exception);
         }
 
         return 0;
@@ -111,7 +112,7 @@ public class MajorDAOImpl extends DatabaseConfiguration implements MajorDAO {
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("MajorDAOImpl.getById", exception);
         }
 
         return null;

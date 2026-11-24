@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.SchoolSettingsDAO;
 import co.id.model.SchoolSettings;
@@ -40,7 +41,7 @@ public class SchoolSettingsDAOImpl extends DatabaseConfiguration implements Scho
                 return settings;
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("SchoolSettingsDAOImpl.getSettings", exception);
         }
 
         return null;

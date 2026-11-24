@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.StudentDAO;
 import co.id.model.Classroom;
@@ -30,7 +31,7 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                 students.add(mapBasicResultSetToStudent(resultSet));
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("StudentDAOImpl.getAllStudents", exception);
         }
 
         return students;
@@ -61,7 +62,7 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("StudentDAOImpl.getStudentBy", exception);
         }
 
         return students;
@@ -92,7 +93,7 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("StudentDAOImpl.getStudents", exception);
         }
 
         return students;
@@ -110,7 +111,7 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                 return resultSet.getInt("total");
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("StudentDAOImpl.countStudents", exception);
         }
 
         return 0;
@@ -138,7 +139,7 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("StudentDAOImpl.getById", exception);
         }
 
         return null;
@@ -165,7 +166,7 @@ public class StudentDAOImpl extends DatabaseConfiguration implements StudentDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("StudentDAOImpl.getByClassroom", exception);
         }
 
         return students;

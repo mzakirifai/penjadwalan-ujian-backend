@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.SubjectDAO;
 import co.id.model.Major;
@@ -38,7 +39,7 @@ public class SubjectDAOImpl extends DatabaseConfiguration implements SubjectDAO{
             }
 
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("SubjectDAOImpl.getAllSubjects", exception);
         }
 
         return subjects;
@@ -68,7 +69,7 @@ public class SubjectDAOImpl extends DatabaseConfiguration implements SubjectDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("SubjectDAOImpl.getSubjectBy", exception);
         }
 
         return subjects;
@@ -99,7 +100,7 @@ public class SubjectDAOImpl extends DatabaseConfiguration implements SubjectDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("SubjectDAOImpl.getSubjects", exception);
         }
 
         return subjects;
@@ -117,7 +118,7 @@ public class SubjectDAOImpl extends DatabaseConfiguration implements SubjectDAO{
                 return resultSet.getInt("total");
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("SubjectDAOImpl.countSubjects", exception);
         }
 
         return 0;
@@ -145,7 +146,7 @@ public class SubjectDAOImpl extends DatabaseConfiguration implements SubjectDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("SubjectDAOImpl.getById", exception);
         }
 
         return null;

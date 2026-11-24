@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.RoomDAO;
 import co.id.model.Room;
@@ -27,7 +28,7 @@ public class RoomDAOImpl extends DatabaseConfiguration implements RoomDAO{
                 rooms.add(mapResultSetToRoom(resultSet));
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("RoomDAOImpl.getAllRooms", exception);
         }
 
         return rooms;
@@ -50,7 +51,7 @@ public class RoomDAOImpl extends DatabaseConfiguration implements RoomDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("RoomDAOImpl.getRoomBy", exception);
         }
 
         return rooms;
@@ -73,7 +74,7 @@ public class RoomDAOImpl extends DatabaseConfiguration implements RoomDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("RoomDAOImpl.getRooms", exception);
         }
 
         return rooms;
@@ -91,7 +92,7 @@ public class RoomDAOImpl extends DatabaseConfiguration implements RoomDAO{
                 return resultSet.getInt("total");
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("RoomDAOImpl.countRooms", exception);
         }
 
         return 0;
@@ -145,7 +146,7 @@ public class RoomDAOImpl extends DatabaseConfiguration implements RoomDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("RoomDAOImpl.getById", exception);
         }
 
         return null;

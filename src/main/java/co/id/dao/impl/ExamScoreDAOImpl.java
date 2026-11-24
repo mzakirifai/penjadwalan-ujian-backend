@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.ExamScoreDAO;
 import co.id.model.ExamSchedule;
@@ -36,7 +37,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 scores.add(mapBasicResultSetToExamScore(resultSet));
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.getAllExamScores", exception);
         }
 
         return scores;
@@ -61,7 +62,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.getExamScoreBy", exception);
         }
 
         return scores;
@@ -84,7 +85,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.getExamScores", exception);
         }
 
         return scores;
@@ -106,7 +107,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.getByExamSchedule", exception);
         }
 
         return scores;
@@ -128,7 +129,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.getByStudent", exception);
         }
 
         return scores;
@@ -146,7 +147,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 return resultSet.getInt("total");
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.countExamScores", exception);
         }
 
         return 0;
@@ -167,7 +168,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.countByExamSchedule", exception);
         }
 
         return 0;
@@ -188,7 +189,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.getById", exception);
         }
 
         return null;
@@ -324,7 +325,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.hasScore", exception);
         }
 
         return false;
@@ -415,7 +416,7 @@ public class ExamScoreDAOImpl extends DatabaseConfiguration implements ExamScore
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScoreDAOImpl.getPassFailSummary", exception);
         }
 
         return new co.id.model.report.PassFailSummary(0, 0);

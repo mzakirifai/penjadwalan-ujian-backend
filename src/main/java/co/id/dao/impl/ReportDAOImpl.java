@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.ExamScheduleDAO;
 import co.id.dao.ExamScoreDAO;
@@ -70,7 +71,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
                 items.add(item);
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ReportDAOImpl.getMajorReport", exception);
         }
 
         return items;
@@ -119,7 +120,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
                 items.add(item);
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ReportDAOImpl.getClassroomReport", exception);
         }
 
         return items;
@@ -153,7 +154,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ReportDAOImpl.getSubjectReport", exception);
         }
 
         return subjects;
@@ -279,7 +280,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ReportDAOImpl.getParticipantCardReport", exception);
         }
  
         return items;
@@ -321,7 +322,7 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ReportDAOImpl.getClassScoreRecapReport", exception);
         }
  
         return items;

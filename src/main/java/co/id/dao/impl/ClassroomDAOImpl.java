@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.ClassroomDAO;
 import co.id.model.Classroom;
@@ -28,7 +29,7 @@ public class ClassroomDAOImpl extends DatabaseConfiguration implements Classroom
                 classrooms.add(mapBasicResultSetToClassroom(resultSet));
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ClassroomDAOImpl.getAllClassrooms", exception);
         }
 
         return classrooms;
@@ -58,7 +59,7 @@ public class ClassroomDAOImpl extends DatabaseConfiguration implements Classroom
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ClassroomDAOImpl.getClassroomBy", exception);
         }
 
         return classrooms;
@@ -89,7 +90,7 @@ public class ClassroomDAOImpl extends DatabaseConfiguration implements Classroom
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ClassroomDAOImpl.getClassrooms", exception);
         }
 
         return classrooms;
@@ -107,7 +108,7 @@ public class ClassroomDAOImpl extends DatabaseConfiguration implements Classroom
                 return resultSet.getInt("total");
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ClassroomDAOImpl.countClassrooms", exception);
         }
 
         return 0;
@@ -135,7 +136,7 @@ public class ClassroomDAOImpl extends DatabaseConfiguration implements Classroom
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ClassroomDAOImpl.getById", exception);
         }
 
         return null;

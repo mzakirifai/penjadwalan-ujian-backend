@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.ExamScheduleDAO;
 import co.id.model.Classroom;
@@ -43,7 +44,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 schedules.add(mapBasicResultSetToExamSchedule(resultSet));
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.getAllExamSchedules", exception);
         }
 
         return schedules;
@@ -62,7 +63,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 schedules.add(mapResultSetToExamSchedule(resultSet));
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.getAllExamSchedulesDetailed", exception);
         }
 
         return schedules;
@@ -87,7 +88,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.getExamScheduleBy", exception);
         }
 
         return schedules;
@@ -110,7 +111,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.getExamSchedules", exception);
         }
 
         return schedules;
@@ -132,7 +133,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.getTodayExamSchedules", exception);
         }
 
         return schedules;
@@ -150,7 +151,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 return resultSet.getInt("total");
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.countExamSchedules", exception);
         }
 
         return 0;
@@ -171,7 +172,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.getById", exception);
         }
 
         return null;
@@ -197,7 +198,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.getByPeriod", exception);
         }
 
         return schedules;
@@ -277,7 +278,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.getExamCountPerDay", exception);
         }
 
         return counts;
@@ -681,7 +682,7 @@ public class ExamScheduleDAOImpl extends DatabaseConfiguration implements ExamSc
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("ExamScheduleDAOImpl.hasSameSubjectForClassroom", exception);
         }
 
         return false;

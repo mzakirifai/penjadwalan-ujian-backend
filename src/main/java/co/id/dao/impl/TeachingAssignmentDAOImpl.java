@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.TeachingAssignmentDAO;
 import co.id.model.Classroom;
@@ -184,7 +185,7 @@ public class TeachingAssignmentDAOImpl extends DatabaseConfiguration implements 
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("TeachingAssignmentDAOImpl.query", exception);
         }
         return list;
     }
@@ -199,7 +200,7 @@ public class TeachingAssignmentDAOImpl extends DatabaseConfiguration implements 
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("TeachingAssignmentDAOImpl.count", exception);
         }
         return 0;
     }

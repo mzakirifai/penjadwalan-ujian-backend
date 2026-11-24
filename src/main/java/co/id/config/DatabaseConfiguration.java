@@ -35,7 +35,7 @@ public class DatabaseConfiguration {
             hikariDataSource = new HikariDataSource(hikariConfig);
 
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("DatabaseConfiguration.init", exception);
         }
     }
 

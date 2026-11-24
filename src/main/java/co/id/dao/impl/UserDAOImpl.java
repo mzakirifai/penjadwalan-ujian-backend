@@ -1,5 +1,6 @@
 package co.id.dao.impl;
 
+import co.id.config.AppLog;
 import co.id.config.DatabaseConfiguration;
 import co.id.dao.UserDAO;
 import co.id.model.Teacher;
@@ -32,7 +33,7 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                 users.add(mapBasicResultSetToUser(resultSet));
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("UserDAOImpl.getAllUsers", exception);
         }
 
         return users;
@@ -55,7 +56,7 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("UserDAOImpl.getUsers", exception);
         }
 
         return users;
@@ -73,7 +74,7 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                 return resultSet.getInt("total");
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("UserDAOImpl.countUsers", exception);
         }
 
         return 0;
@@ -94,7 +95,7 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("UserDAOImpl.getById", exception);
         }
 
         return null;
@@ -115,7 +116,7 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("UserDAOImpl.getByUsername", exception);
         }
 
         return null;
@@ -162,7 +163,7 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("UserDAOImpl.getByKeyword", exception);
         }
 
         return users;
@@ -279,7 +280,7 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("UserDAOImpl.isUsernameTaken", exception);
         }
 
         return false;
@@ -301,7 +302,7 @@ public class UserDAOImpl extends DatabaseConfiguration implements UserDAO{
                 }
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            AppLog.error("UserDAOImpl.isTeacherLinked", exception);
         }
 
         return false;
