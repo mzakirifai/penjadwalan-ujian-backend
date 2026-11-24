@@ -45,6 +45,12 @@ public interface RoomAllocationDAO {
     /** Guru yang mengawasi sesi LAIN yang waktunya bertumpuk. */
     public Set<Integer> getBusyTeacherIds(LocalDate date, LocalTime start, LocalTime end);
 
+    /**
+     * Simpan pengawas hasil impor dalam satu transaksi: tiap (sesi, ruangan) di daftar diganti pengawasnya,
+     * ruangan lain tidak disentuh. Bila satu gagal, semuanya dibatalkan.
+     */
+    public int saveSupervisors(List<co.id.model.SupervisorAssignment> assignments, String updatedBy);
+
     /** teacherId -> jumlah ruangan yang diawasi pada tanggal tersebut. */
     public Map<Integer, Integer> getSupervisionCounts(LocalDate date);
 

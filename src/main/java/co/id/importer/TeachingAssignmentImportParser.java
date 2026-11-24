@@ -24,7 +24,7 @@ import java.util.Set;
  * - Kelas dicari lewat nama kelas (mis. X TKJ 1) atau kode kelas.
  * - Kode Guru 1-99 atau kosong/"-"; dalam satu mapel satu kode hanya untuk satu guru.
  * - Mapel harus berlaku untuk kelasnya (jurusan & tingkat), sama dengan aturan form Pengampu.
- * Pengampu yang sudah terdaftar (guru, mapel, kelas sama) tidak diimport ulang.
+ * Pengampu yang sudah terdaftar (guru, mapel, kelas sama) tidak diimpor ulang.
  */
 public class TeachingAssignmentImportParser {
 

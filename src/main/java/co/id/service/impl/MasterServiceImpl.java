@@ -122,7 +122,7 @@ public class MasterServiceImpl implements MasterService{
             if (teacher.getNip() != null && !seenNip.add(teacher.getNip())) {
                 throw new IllegalArgumentException("NIP " + teacher.getNip() + " sudah terdaftar.");
             }
-            // Cegah guru ganda bila file yang sama diimport dua kali: nama sama dianggap guru yang sama
+            // Cegah guru ganda bila file yang sama diimpor dua kali: nama sama dianggap guru yang sama
             // bila salah satunya tanpa NIP (nama sama dengan NIP berbeda = dua guru berbeda)
             String base = co.id.importer.TeacherImportParser.baseName(teacher.getName());
             Boolean sameNameWithoutNip = seenNames.get(base);

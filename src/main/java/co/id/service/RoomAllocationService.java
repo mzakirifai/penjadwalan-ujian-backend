@@ -53,4 +53,18 @@ public interface RoomAllocationService {
     public void assignSupervisorsAutomatically(RoomPlan plan);
 
     public void save(RoomPlan plan, String currentUsername, String currentUserRole);
+
+    /**
+     * Pratinjau impor jadwal pengawas (format matriks sekolah). Tiap penugasan dicek: sesi ada di jadwal offline,
+     * ruangan sudah dipakai di Penempatan Ruangan sesi itu, nomor pengawas sudah dipasangkan ke guru,
+     * guru tidak dobel di sesi yang sama dan tidak bentrok dengan sesi lain yang waktunya bertumpuk.
+     *
+     * @param mapping nomor pengawas di file -> guru di aplikasi (dipilih/dicek pengguna)
+     */
+    public List<co.id.importer.ImportItem<co.id.model.SupervisorAssignment>> previewSupervisorImport(
+            List<co.id.importer.SupervisorScheduleParser.Entry> entries, java.util.Map<Integer, String> legend,
+            java.util.Map<Integer, co.id.model.Teacher> mapping);
+
+    /** Simpan pengawas hasil impor (semua atau tidak sama sekali). Ruangan yang tidak ada di daftar tidak diubah. */
+    public int importSupervisors(List<co.id.model.SupervisorAssignment> assignments, String currentUsername, String currentUserRole);
 }

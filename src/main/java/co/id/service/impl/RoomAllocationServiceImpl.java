@@ -273,6 +273,7 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
                         + assignment.describeClasses() + ").");
             }
         }
+        keepSavedSupervisors(plan);
         return plan;
     }
 
@@ -406,7 +407,22 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
             throw new IllegalStateException("Belum ada siswa yang ditempatkan ke ruangan.");
         }
         assignParticipantNumbers(plan, existingRows, rowsBySchedule);
+        keepSavedSupervisors(plan);
         return plan;
+    }
+
+    /**
+     * Penempatan dibuat ulang: pengawas yang sudah tersimpan untuk ruangan yang tetap dipakai tidak hilang
+     * (mis. hasil impor jadwal pengawas atau pilihan manual sebelumnya).
+     */
+    private void keepSavedSupervisors(RoomPlan plan) {
+        Map<Integer, Teacher> saved = roomAllocationDAO.getSupervisors(plan.getDate(), plan.getStartTime(), plan.getEndTime());
+        for (RoomAssignment assignment : plan.getRooms()) {
+            Teacher teacher = saved.get(assignment.getRoom().getId());
+            if (teacher != null && assignment.getSupervisor() == null) {
+                assignment.setSupervisor(teacher);
+            }
+        }
     }
 
     @Override
@@ -655,6 +671,169 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
             }
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------ impor jadwal pengawas
+
+    private static final java.time.format.DateTimeFormatter DMY = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final java.time.format.DateTimeFormatter HM = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+
+    /** Data satu sesi yang dibutuhkan untuk memeriksa impor pengawas. */
+    private static final class SessionCheck {
+        ExamSession session;
+        Map<Integer, Teacher> placedRooms = new LinkedHashMap<>(); // ruangan di penempatan -> pengawas tersimpan
+        Set<Integer> busyTeachers = new HashSet<>();
+    }
+
+    private SessionCheck sessionCheck(LocalDate date, LocalTime start, LocalTime end, Map<LocalDate, List<ExamSession>> cache) {
+        SessionCheck check = new SessionCheck();
+        for (ExamSession s : cache.computeIfAbsent(date, this::getSessions)) {
+            if (s.getStartTime().equals(start) && s.getEndTime().equals(end)) {
+                check.session = s;
+            }
+        }
+        if (check.session != null) {
+            RoomPlan plan = loadSaved(check.session);
+            if (plan != null) {
+                for (RoomAssignment room : plan.getRooms()) {
+                    check.placedRooms.put(room.getRoom().getId(), room.getSupervisor());
+                }
+            }
+            check.busyTeachers = roomAllocationDAO.getBusyTeacherIds(date, start, end);
+        }
+        return check;
+    }
+
+    private static String roomKey(String name) {
+        return name == null ? "" : name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
+    }
+
+    @Override
+    public List<co.id.importer.ImportItem<co.id.model.SupervisorAssignment>> previewSupervisorImport(
+            List<co.id.importer.SupervisorScheduleParser.Entry> entries, Map<Integer, String> legend, Map<Integer, Teacher> mapping) {
+        Map<String, Room> roomByKey = new HashMap<>();
+        for (Room room : masterService.getAllRooms()) {
+            roomByKey.putIfAbsent(roomKey(room.getName()), room);
+        }
+
+        // kelompokkan per sesi (tanggal + jam persis)
+        Map<String, List<co.id.importer.SupervisorScheduleParser.Entry>> bySession = new LinkedHashMap<>();
+        for (var e : entries) {
+            bySession.computeIfAbsent(e.date() + "|" + e.start() + "|" + e.end(), k -> new ArrayList<>()).add(e);
+        }
+
+        Map<LocalDate, List<ExamSession>> cache = new HashMap<>();
+        List<co.id.importer.ImportItem<co.id.model.SupervisorAssignment>> items = new ArrayList<>();
+        for (List<co.id.importer.SupervisorScheduleParser.Entry> group : bySession.values()) {
+            var first = group.get(0);
+            SessionCheck check = sessionCheck(first.date(), first.start(), first.end(), cache);
+
+            // pengawas akhir sesi ini = yang tersimpan untuk ruangan di luar file + yang ada di file
+            Set<Integer> roomsInFile = new HashSet<>();
+            for (var e : group) {
+                Room room = roomByKey.get(roomKey(e.roomLabel()));
+                if (room != null) {
+                    roomsInFile.add(room.getId());
+                }
+            }
+            Map<Integer, List<String>> roomsPerTeacher = new HashMap<>();
+            check.placedRooms.forEach((roomId, teacher) -> {
+                if (teacher != null && !roomsInFile.contains(roomId)) {
+                    roomsPerTeacher.computeIfAbsent(teacher.getId(), k -> new ArrayList<>()).add("ruangan lain (tersimpan)");
+                }
+            });
+            for (var e : group) {
+                Teacher t = mapping.get(e.number());
+                if (t != null) {
+                    roomsPerTeacher.computeIfAbsent(t.getId(), k -> new ArrayList<>()).add(e.roomLabel());
+                }
+            }
+
+            for (var e : group) {
+                Room room = roomByKey.get(roomKey(e.roomLabel()));
+                String fileName = legend.get(e.number());
+                Teacher teacher = mapping.get(e.number());
+                String error = null;
+                String warning = null;
+
+                if (room == null) {
+                    error = "Ruangan " + e.roomLabel() + " tidak ada di menu Ruangan";
+                } else if (check.session == null) {
+                    error = "Tidak ada jadwal ujian offline pada " + e.date().format(DMY) + " jam "
+                            + e.start().format(HM) + "-" + e.end().format(HM);
+                } else if (!check.placedRooms.containsKey(room.getId())) {
+                    error = room.getName() + " belum dipakai di Penempatan Ruangan sesi ini (buat/simpan penempatan dulu)";
+                } else if (fileName == null) {
+                    error = "No. " + e.number() + " tidak ada di daftar nama pengawas di file";
+                } else if (teacher == null) {
+                    error = "No. " + e.number() + " (" + fileName + ") belum dipasangkan ke data Guru";
+                } else if (roomsPerTeacher.getOrDefault(teacher.getId(), List.of()).size() > 1) {
+                    List<String> others = new ArrayList<>(roomsPerTeacher.get(teacher.getId()));
+                    others.remove(e.roomLabel());
+                    error = "Pengawas no. " + e.number() + " dobel di sesi ini, juga di " + String.join(", ", others);
+                } else if (check.busyTeachers.contains(teacher.getId())) {
+                    error = teacher.getName() + " sudah mengawas di sesi lain yang jamnya bertumpuk";
+                } else {
+                    Teacher previous = check.placedRooms.get(room.getId());
+                    if (previous != null && previous.getId() != teacher.getId()) {
+                        warning = "menggantikan " + previous.getName();
+                    }
+                }
+
+                co.id.model.SupervisorAssignment payload = room == null || teacher == null ? null
+                        : new co.id.model.SupervisorAssignment(e.date(), e.start(), e.end(), room, teacher);
+                items.add(new co.id.importer.ImportItem<>(e.sheet(), e.rowNumber(), List.of(
+                        e.date().format(DMY),
+                        e.start().format(HM) + "-" + e.end().format(HM),
+                        room != null ? room.getName() : e.roomLabel(),
+                        String.valueOf(e.number()),
+                        teacher != null ? teacher.getName() : (fileName != null ? fileName + " (?)" : "-")),
+                        payload, error, warning));
+            }
+        }
+        return items;
+    }
+
+    @Override
+    public int importSupervisors(List<co.id.model.SupervisorAssignment> assignments, String currentUsername, String currentUserRole) {
+        if (!"admin".equalsIgnoreCase(currentUserRole)) {
+            throw new SecurityException("Hanya admin yang boleh mengatur pengawas ruangan.");
+        }
+        if (assignments == null || assignments.isEmpty()) {
+            return 0;
+        }
+        // cek ulang tepat sebelum menyimpan (data bisa berubah sejak pratinjau dibuka)
+        Map<String, List<co.id.model.SupervisorAssignment>> bySession = new LinkedHashMap<>();
+        for (var a : assignments) {
+            bySession.computeIfAbsent(a.getDate() + "|" + a.getStartTime() + "|" + a.getEndTime(), k -> new ArrayList<>()).add(a);
+        }
+        Map<LocalDate, List<ExamSession>> cache = new HashMap<>();
+        for (List<co.id.model.SupervisorAssignment> group : bySession.values()) {
+            var first = group.get(0);
+            String when = first.getDate().format(DMY) + " " + first.getStartTime().format(HM) + "-" + first.getEndTime().format(HM);
+            SessionCheck check = sessionCheck(first.getDate(), first.getStartTime(), first.getEndTime(), cache);
+            if (check.session == null) {
+                throw new IllegalStateException("Sesi " + when + " tidak ada lagi di jadwal ujian offline.");
+            }
+            Map<Integer, Integer> finalSupervisor = new HashMap<>();
+            check.placedRooms.forEach((roomId, t) -> finalSupervisor.put(roomId, t == null ? null : t.getId()));
+            for (var a : group) {
+                if (!check.placedRooms.containsKey(a.getRoom().getId())) {
+                    throw new IllegalStateException(a.getRoom().getName() + " belum dipakai di penempatan sesi " + when + ".");
+                }
+                if (check.busyTeachers.contains(a.getTeacher().getId())) {
+                    throw new IllegalStateException(a.getTeacher().getName() + " sudah mengawas di sesi lain yang bertumpuk dengan " + when + ".");
+                }
+                finalSupervisor.put(a.getRoom().getId(), a.getTeacher().getId());
+            }
+            Set<Integer> seen = new HashSet<>();
+            for (Integer teacherId : finalSupervisor.values()) {
+                if (teacherId != null && !seen.add(teacherId)) {
+                    throw new IllegalStateException("Ada pengawas yang dobel di sesi " + when + ".");
+                }
+            }
+        }
+        return roomAllocationDAO.saveSupervisors(assignments, currentUsername);
     }
 
     @Override

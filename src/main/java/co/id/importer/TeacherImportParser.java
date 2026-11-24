@@ -17,8 +17,8 @@ import java.util.Set;
  * Wajib: Nama, Jenis Kelamin (kolom jenis_kelamin di database NOT NULL).
  * NIP opsional (banyak guru honorer belum punya NIP), tetapi jika diisi harus unik.
  * Nama yang sama (perbedaan gelar diabaikan, lihat {@link #baseName}) hanya dianggap guru yang sama bila salah satunya
- * tidak punya NIP, supaya file yang sama tidak menggandakan guru tanpa NIP bila diimport dua kali.
- * Nama sama dengan NIP berbeda dianggap dua guru yang berbeda dan tetap diimport.
+ * tidak punya NIP, supaya file yang sama tidak menggandakan guru tanpa NIP bila diimpor dua kali.
+ * Nama sama dengan NIP berbeda dianggap dua guru yang berbeda dan tetap diimpor.
  */
 public class TeacherImportParser {
 

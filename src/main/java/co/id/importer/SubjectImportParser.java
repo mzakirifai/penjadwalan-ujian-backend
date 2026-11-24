@@ -22,7 +22,7 @@ import java.util.Set;
  * - KKM 0-100; bila kosong dipakai {@link #DEFAULT_KKM} dan diberi catatan di pratinjau.
  * - Kode Mapel opsional. Bila diisi, kode itu yang dipakai (supaya sheet Pengampu di file yang sama bisa
  *   merujuk mapel lewat kodenya); bila kosong, kode dibuat otomatis seperti saat menambah lewat form.
- * Mapel yang sudah terdaftar (kode sama, atau nama + jurusan + tingkat sama) tidak diimport ulang.
+ * Mapel yang sudah terdaftar (kode sama, atau nama + jurusan + tingkat sama) tidak diimpor ulang.
  */
 public class SubjectImportParser {
 

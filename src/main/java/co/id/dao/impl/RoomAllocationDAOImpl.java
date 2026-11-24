@@ -151,6 +151,43 @@ public class RoomAllocationDAOImpl extends DatabaseConfiguration implements Room
         return queryIds(sql, date, start, end, 1);
     }
 
+    @Override
+    public int saveSupervisors(List<co.id.model.SupervisorAssignment> assignments, String updatedBy) {
+        String delete = "DELETE FROM trx_pengawas_ruangan WHERE tanggal = ? AND jam_mulai = ? AND jam_selesai = ? AND id_ruangan = ?";
+        String insert = "INSERT INTO trx_pengawas_ruangan(tanggal, jam_mulai, jam_selesai, id_ruangan, id_guru, diubah_oleh) "
+                + "VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection connection = getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement del = connection.prepareStatement(delete);
+                 PreparedStatement ins = connection.prepareStatement(insert)) {
+                for (co.id.model.SupervisorAssignment a : assignments) {
+                    del.setObject(1, a.getDate());
+                    del.setObject(2, a.getStartTime());
+                    del.setObject(3, a.getEndTime());
+                    del.setInt(4, a.getRoom().getId());
+                    del.executeUpdate();
+
+                    ins.setObject(1, a.getDate());
+                    ins.setObject(2, a.getStartTime());
+                    ins.setObject(3, a.getEndTime());
+                    ins.setInt(4, a.getRoom().getId());
+                    ins.setInt(5, a.getTeacher().getId());
+                    ins.setString(6, updatedBy);
+                    ins.executeUpdate();
+                }
+                connection.commit();
+                return assignments.size();
+            } catch (Exception e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Gagal menyimpan pengawas, tidak ada data yang berubah: " + e.getMessage(), e);
+        }
+    }
+
     // Menjalankan query yang terdiri dari `parts` blok dengan parameter yang sama: tanggal, selesai, mulai, mulai, selesai
     private Set<Integer> queryIds(String sql, LocalDate date, LocalTime start, LocalTime end, int parts) {
         Set<Integer> ids = new HashSet<>();

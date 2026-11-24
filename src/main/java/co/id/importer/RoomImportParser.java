@@ -15,7 +15,7 @@ import java.util.Set;
  * Kolom: Nama Ruangan | Lantai | Kapasitas
  * Wajib: Nama Ruangan dan Kapasitas (lebih dari 0, sama seperti form Ruangan).
  * Lantai boleh kosong (dianggap lantai 1). Kode ruangan dibuat otomatis (R001, R002, ...).
- * Ruangan dengan nama yang sama (spasi dan huruf besar/kecil diabaikan: "R 1" = "r1") tidak diimport ulang.
+ * Ruangan dengan nama yang sama (spasi dan huruf besar/kecil diabaikan: "R 1" = "r1") tidak diimpor ulang.
  */
 public class RoomImportParser {
 

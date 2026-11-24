@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Satu baris hasil baca Excel beserta hasil validasinya.
- * error == null artinya baris siap diimport.
+ * error == null artinya baris siap diimpor.
  */
 public class ImportItem<T> {
     private final String sheet;
@@ -12,7 +12,7 @@ public class ImportItem<T> {
     private final List<String> cells;   // nilai yang ditampilkan di tabel pratinjau
     private final T payload;            // objek yang akan disimpan (Teacher, Subject, ...)
     private final String error;
-    private final String warning;       // catatan untuk baris yang tetap diimport (boleh null)
+    private final String warning;       // catatan untuk baris yang tetap diimpor (boleh null)
 
     public ImportItem(String sheet, int rowNumber, List<String> cells, T payload, String error) {
         this(sheet, rowNumber, cells, payload, error, null);
