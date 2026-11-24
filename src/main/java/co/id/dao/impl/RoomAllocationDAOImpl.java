@@ -160,6 +160,12 @@ public class RoomAllocationDAOImpl extends DatabaseConfiguration implements Room
             connection.setAutoCommit(false);
             try (PreparedStatement del = connection.prepareStatement(delete);
                  PreparedStatement ins = connection.prepareStatement(insert)) {
+                java.util.Set<String> locked = new java.util.HashSet<>();
+                for (co.id.model.SupervisorAssignment a : assignments) {
+                    if (locked.add(a.getDate() + "|" + a.getStartTime() + "|" + a.getEndTime())) {
+                        lockSession(connection, a.getDate(), a.getStartTime(), a.getEndTime());
+                    }
+                }
                 for (co.id.model.SupervisorAssignment a : assignments) {
                     del.setObject(1, a.getDate());
                     del.setObject(2, a.getStartTime());
@@ -232,11 +238,20 @@ public class RoomAllocationDAOImpl extends DatabaseConfiguration implements Room
 
     @Override
     public void saveAllocation(LocalDate date, LocalTime start, LocalTime end, List<Integer> scheduleIds,
-            List<SeatWrite> seats, Map<Integer, Integer> supervisorByRoom, String updatedBy) {
+            List<SeatWrite> seats, Map<Integer, Integer> supervisorByRoom, String updatedBy, String expectedFingerprint) {
 
         try (Connection connection = getConnection()) {
             connection.setAutoCommit(false);
             try {
+                // 0. kunci jadwal sesi ini supaya dua penyimpanan sesi yang sama tidak berjalan bersamaan,
+                //    lalu pastikan isinya belum diubah orang lain sejak dibuka
+                lockSession(connection, date, start, end);
+                if (expectedFingerprint != null && !expectedFingerprint.equals(fingerprint(connection, date, start, end))) {
+                    throw new co.id.dao.ConcurrentChangeException(
+                            "Penempatan sesi ini sudah diubah dan disimpan oleh pengguna lain setelah Anda membukanya"
+                            + lastChange(connection, date, start, end) + ".");
+                }
+
                 String ids = placeholders(scheduleIds.size());
 
                 // 1. kosongkan kursi lama (NULL tidak bentrok dengan kunci unik) sebelum kursi baru dipasang
@@ -318,9 +333,95 @@ public class RoomAllocationDAOImpl extends DatabaseConfiguration implements Room
             } finally {
                 connection.setAutoCommit(true);
             }
+        } catch (co.id.dao.ConcurrentChangeException e) {
+            throw e;
         } catch (Exception e) {
             throw new IllegalStateException("Gagal menyimpan penempatan ruangan: " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    public String getSessionFingerprint(LocalDate date, LocalTime start, LocalTime end) {
+        try (Connection connection = getConnection()) {
+            return fingerprint(connection, date, start, end);
+        } catch (Exception e) {
+            throw new IllegalStateException("Gagal membaca data penempatan: " + e.getMessage(), e);
+        }
+    }
+
+    private static void lockSession(Connection connection, LocalDate date, LocalTime start, LocalTime end) throws Exception {
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT id_ujian FROM trx_jadwal WHERE tanggal = ? AND jam_mulai = ? AND jam_selesai = ? FOR UPDATE")) {
+            ps.setObject(1, date);
+            ps.setObject(2, start);
+            ps.setObject(3, end);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    // cukup dibaca supaya baris terkunci sampai transaksi selesai
+                }
+            }
+        }
+    }
+
+    /** SHA-256 dari jadwal offline sesi ini + peserta (ruangan, kursi, nomor) + pengawas, dalam urutan tetap. */
+    private static String fingerprint(Connection connection, LocalDate date, LocalTime start, LocalTime end) throws Exception {
+        StringBuilder sb = new StringBuilder();
+        String[] queries = {
+                "SELECT j.id_ujian, j.mode_ujian, j.jenis_ujian FROM trx_jadwal j "
+                        + "WHERE j.tanggal = ? AND j.jam_mulai = ? AND j.jam_selesai = ? ORDER BY j.id_ujian",
+                "SELECT p.id_peserta, p.id_ujian, p.id_siswa, p.id_ruangan, p.no_kursi, p.no_peserta FROM trx_peserta p "
+                        + "JOIN trx_jadwal j ON j.id_ujian = p.id_ujian "
+                        + "WHERE j.tanggal = ? AND j.jam_mulai = ? AND j.jam_selesai = ? AND j.mode_ujian = 'Offline' "
+                        + "ORDER BY p.id_peserta",
+                "SELECT pr.id_ruangan, pr.id_guru FROM trx_pengawas_ruangan pr "
+                        + "WHERE pr.tanggal = ? AND pr.jam_mulai = ? AND pr.jam_selesai = ? ORDER BY pr.id_ruangan"};
+        for (String sql : queries) {
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setObject(1, date);
+                ps.setObject(2, start);
+                ps.setObject(3, end);
+                try (ResultSet rs = ps.executeQuery()) {
+                    int columns = rs.getMetaData().getColumnCount();
+                    while (rs.next()) {
+                        for (int c = 1; c <= columns; c++) {
+                            sb.append(rs.getString(c)).append('|');
+                        }
+                        sb.append('\n');
+                    }
+                }
+            }
+            sb.append('#');
+        }
+        byte[] hash = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return java.util.HexFormat.of().formatHex(hash);
+    }
+
+    /** ", terakhir oleh admin2 pukul 10:42" (perubahan terakhir pada peserta atau pengawas sesi ini). */
+    private static String lastChange(Connection connection, LocalDate date, LocalTime start, LocalTime end) {
+        String sql = "SELECT diubah_oleh, tanggal_update FROM ("
+                + " SELECT p.diubah_oleh, p.tanggal_update FROM trx_peserta p JOIN trx_jadwal j ON j.id_ujian = p.id_ujian"
+                + " WHERE j.tanggal = ? AND j.jam_mulai = ? AND j.jam_selesai = ?"
+                + " UNION ALL SELECT pr.diubah_oleh, pr.tanggal_update FROM trx_pengawas_ruangan pr"
+                + " WHERE pr.tanggal = ? AND pr.jam_mulai = ? AND pr.jam_selesai = ?) x ORDER BY tanggal_update DESC LIMIT 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < 2; i++) {
+                ps.setObject(i * 3 + 1, date);
+                ps.setObject(i * 3 + 2, start);
+                ps.setObject(i * 3 + 3, end);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getTimestamp(2) != null) {
+                    String who = rs.getString(1);
+                    String when = rs.getTimestamp(2).toLocalDateTime()
+                            .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"));
+                    return " (terakhir" + (who != null ? " oleh " + who : "") + ", " + when + ")";
+                }
+            }
+        } catch (Exception ignored) {
+            // keterangan tambahan saja
+        }
+        return "";
     }
 
     private static String placeholders(int n) {

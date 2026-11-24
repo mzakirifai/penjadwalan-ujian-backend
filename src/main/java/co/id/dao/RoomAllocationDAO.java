@@ -58,6 +58,16 @@ public interface RoomAllocationDAO {
      * Simpan penempatan satu sesi dalam satu transaksi: kursi peserta, pengawas per ruangan, dan
      * mengosongkan ruangan/pengawas pada jadwal-jadwal sesi tersebut (kini diatur per peserta / per ruangan).
      */
+    /**
+     * "Sidik jari" isi satu sesi: jadwal di sesi itu, peserta (ruangan, kursi, nomor) dan pengawasnya.
+     * Berubah bila ada yang menyimpan perubahan pada sesi tersebut.
+     */
+    public String getSessionFingerprint(LocalDate date, LocalTime start, LocalTime end);
+
+    /**
+     * @param expectedFingerprint sidik jari saat sesi dibuka; bila isi sesi di database sudah berbeda,
+     *                            penyimpanan dibatalkan dengan ConcurrentChangeException. null = tanpa pemeriksaan.
+     */
     public void saveAllocation(LocalDate date, LocalTime start, LocalTime end, List<Integer> scheduleIds,
-            List<SeatWrite> seats, Map<Integer, Integer> supervisorByRoom, String updatedBy);
+            List<SeatWrite> seats, Map<Integer, Integer> supervisorByRoom, String updatedBy, String expectedFingerprint);
 }

@@ -54,6 +54,15 @@ public interface RoomAllocationService {
 
     public void save(RoomPlan plan, String currentUsername, String currentUserRole);
 
+    /** Sidik jari isi sesi saat ini (dicatat ketika sesi dibuka, dipakai untuk cek perubahan oleh admin lain). */
+    public String getFingerprint(ExamSession session);
+
+    /**
+     * Simpan dengan pemeriksaan: bila isi sesi di database sudah berbeda dari {@code expectedFingerprint}
+     * (ada admin lain yang menyimpan lebih dulu), dibatalkan dengan {@link co.id.dao.ConcurrentChangeException}.
+     */
+    public void save(RoomPlan plan, String expectedFingerprint, String currentUsername, String currentUserRole);
+
     /**
      * Pratinjau impor jadwal pengawas (format matriks sekolah). Tiap penugasan dicek: sesi ada di jadwal offline,
      * ruangan sudah dipakai di Penempatan Ruangan sesi itu, nomor pengawas sudah dipasangkan ke guru,

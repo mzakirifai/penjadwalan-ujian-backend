@@ -837,7 +837,18 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
     }
 
     @Override
+    public String getFingerprint(ExamSession session) {
+        return session == null ? null
+                : roomAllocationDAO.getSessionFingerprint(session.getDate(), session.getStartTime(), session.getEndTime());
+    }
+
+    @Override
     public void save(RoomPlan plan, String currentUsername, String currentUserRole) {
+        save(plan, null, currentUsername, currentUserRole);
+    }
+
+    @Override
+    public void save(RoomPlan plan, String expectedFingerprint, String currentUsername, String currentUserRole) {
         if (!"admin".equalsIgnoreCase(currentUserRole)) {
             throw new SecurityException("Hanya admin yang boleh mengatur penempatan ruangan.");
         }
@@ -888,6 +899,6 @@ public class RoomAllocationServiceImpl implements RoomAllocationService {
 
         List<Integer> scheduleIds = plan.getSchedules().stream().map(ExamSchedule::getId).collect(Collectors.toList());
         roomAllocationDAO.saveAllocation(plan.getDate(), plan.getStartTime(), plan.getEndTime(), scheduleIds,
-                writes, supervisorByRoom, currentUsername);
+                writes, supervisorByRoom, currentUsername, expectedFingerprint);
     }
 }
