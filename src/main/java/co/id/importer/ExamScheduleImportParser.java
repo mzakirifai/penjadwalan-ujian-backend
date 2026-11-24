@@ -2,7 +2,6 @@ package co.id.importer;
 
 import co.id.model.Classroom;
 import co.id.model.ExamSchedule;
-import co.id.model.ExamTypes;
 import co.id.model.Subject;
 import co.id.model.TeachingAssignment;
 import java.time.LocalDate;
@@ -64,7 +63,13 @@ public class ExamScheduleImportParser {
     public static List<ImportItem<ExamSchedule>> parse(List<TableParser.Row> rows, Collection<Subject> subjects,
                                                        Collection<Classroom> classrooms,
                                                        Collection<TeachingAssignment> teachingAssignments,
-                                                       Collection<ExamSchedule> existing) {
+                                                       Collection<ExamSchedule> existing,
+                                                       Collection<String> examTypes) {
+        // Jenis ujian aktif dari menu Master > Jenis Ujian; dicocokkan tanpa spasi & huruf besar/kecil
+        Map<String, String> examTypeByKey = new LinkedHashMap<>();
+        for (String code : examTypes) {
+            examTypeByKey.put(code.replaceAll("\\s+", "").toUpperCase(Locale.ROOT), code);
+        }
         Map<String, Subject> subjectsByCode = new HashMap<>();
         Map<String, List<Subject>> subjectsByName = new HashMap<>();
         for (Subject s : subjects) {
@@ -109,7 +114,9 @@ public class ExamScheduleImportParser {
             String subjectCode = row.get("subjectCode").replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
             String subjectName = row.get("subjectName").replaceAll("\\s+", " ");
             String codeText = row.get("teacherCode").trim();
-            String examType = row.get("examType").replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+            String examTypeText = row.get("examType").trim();
+            String examType = examTypeByKey.getOrDefault(examTypeText.replaceAll("\\s+", "").toUpperCase(Locale.ROOT),
+                    examTypeText);
             String semester = capitalize(row.get("semester").trim());
             String academicYear = row.get("academicYear").replaceAll("\\s+", "");
             String notes = row.get("notes").trim();
@@ -148,8 +155,9 @@ public class ExamScheduleImportParser {
                 error = "Jam mulai/selesai kosong atau salah (pakai 07:00)";
             } else if (!end.isAfter(start)) {
                 error = "Jam selesai harus setelah jam mulai";
-            } else if (!ExamTypes.ALL.contains(examType)) {
-                error = "Jenis Ujian harus salah satu: " + String.join(", ", ExamTypes.ALL);
+            } else if (!examTypeByKey.containsValue(examType)) {
+                error = examTypeText.isEmpty() ? "Jenis Ujian kosong"
+                        : "Jenis Ujian \"" + examTypeText + "\" tidak terdaftar/aktif. Pilihan: " + String.join(", ", examTypes);
             } else if (!semester.equals("Ganjil") && !semester.equals("Genap")) {
                 error = "Semester harus Ganjil atau Genap";
             } else if (!academicYear.matches("\\d{4}/\\d{4}")) {

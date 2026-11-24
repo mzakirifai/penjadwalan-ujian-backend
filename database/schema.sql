@@ -39,6 +39,27 @@ CREATE TABLE `mst_guru` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `mst_jenis_ujian`
+--
+
+DROP TABLE IF EXISTS `mst_jenis_ujian`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `mst_jenis_ujian` (
+  `id_jenis_ujian` int(11) NOT NULL AUTO_INCREMENT,
+  `kode` varchar(20) NOT NULL,
+  `nama_lengkap` varchar(100) NOT NULL,
+  `aktif` tinyint(1) NOT NULL DEFAULT 1,
+  `urutan` int(11) NOT NULL DEFAULT 0,
+  `tanggal_buat` timestamp NOT NULL DEFAULT current_timestamp(),
+  `tanggal_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `diubah_oleh` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id_jenis_ujian`),
+  UNIQUE KEY `kode` (`kode`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `mst_jurusan`
 --
 
@@ -232,6 +253,8 @@ CREATE TABLE `trx_jadwal` (
   UNIQUE KEY `kode_ujian` (`kode_ujian`),
   KEY `id_mapel` (`id_mapel`),
   KEY `idx_jadwal_kelas_mapel_kode` (`id_kelas`,`id_mapel`,`kode_guru`),
+  KEY `fk_jadwal_jenis_ujian` (`jenis_ujian`),
+  CONSTRAINT `fk_jadwal_jenis_ujian` FOREIGN KEY (`jenis_ujian`) REFERENCES `mst_jenis_ujian` (`kode`) ON UPDATE CASCADE,
   CONSTRAINT `trx_jadwal_ibfk_1` FOREIGN KEY (`id_mapel`) REFERENCES `mst_mapel` (`id_mapel`) ON UPDATE CASCADE,
   CONSTRAINT `trx_jadwal_ibfk_2` FOREIGN KEY (`id_kelas`) REFERENCES `mst_kelas` (`id_kelas`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -355,3 +378,13 @@ CREATE TABLE `users` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed
+
+--
+-- Data wajib: jenis ujian bawaan (bisa diubah lewat menu Master > Jenis Ujian)
+--
+INSERT IGNORE INTO `mst_jenis_ujian` (`kode`, `nama_lengkap`, `urutan`, `diubah_oleh`) VALUES
+    ('UTS', 'Ujian Tengah Semester', 1, 'instalasi'),
+    ('UAS', 'Ujian Akhir Semester', 2, 'instalasi'),
+    ('AAS', 'Asesmen Akhir Semester', 3, 'instalasi'),
+    ('UKK', 'Ujian Kenaikan Kelas', 4, 'instalasi'),
+    ('PRAKTIK', 'Ujian Praktik', 5, 'instalasi');

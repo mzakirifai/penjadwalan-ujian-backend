@@ -12,6 +12,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
 
     private final ExamScheduleDAO examScheduleDAO = new ExamScheduleDAOImpl();
     private final co.id.dao.StudentDAO studentDAO = new co.id.dao.impl.StudentDAOImpl();
+    private final co.id.service.ExamTypeService examTypeService = new ExamTypeServiceImpl();
 
     @Override
     public List<ExamSchedule> getAllExamSchedules() {
@@ -203,6 +204,21 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         if (examSchedule.getExamType() == null || examSchedule.getExamType().isBlank()) {
             throw new IllegalArgumentException("Jenis ujian wajib diisi.");
         }
+        // Jenis ujian harus terdaftar di menu Jenis Ujian. Jenis yang dinonaktifkan hanya boleh dipakai
+        // jadwal lama yang memang sudah memakainya (tidak untuk jadwal baru / mengganti jenis).
+        co.id.model.ExamType type = examTypeService.findByCode(examSchedule.getExamType());
+        if (type == null) {
+            throw new IllegalArgumentException("Jenis ujian \"" + examSchedule.getExamType()
+                    + "\" tidak terdaftar di menu Master > Jenis Ujian.");
+        }
+        if (!type.isActive()) {
+            ExamSchedule old = examSchedule.getId() == 0 ? null : examScheduleDAO.getById(examSchedule.getId());
+            if (old == null || !type.getCode().equalsIgnoreCase(old.getExamType())) {
+                throw new IllegalArgumentException("Jenis ujian " + type.getCode() + " sedang nonaktif. "
+                        + "Aktifkan dulu di menu Master > Jenis Ujian.");
+            }
+        }
+        examSchedule.setExamType(type.getCode()); // simpan dengan penulisan kode resmi, mis. "aas" -> "AAS"
         if (examSchedule.getSemester() == null || examSchedule.getSemester().isBlank()) {
             throw new IllegalArgumentException("Semester wajib diisi.");
         }

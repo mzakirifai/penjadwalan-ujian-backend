@@ -22,6 +22,7 @@ Backup dulu lewat phpMyAdmin > Export, lalu jalankan file migrasi **berurutan** 
 | 6 | `migrasi_hapus_photo_path.sql` | hapus kolom `photo_path` (foto ada di `photo_data`) | ya |
 | 7 | `migrasi_status_administrasi.sql` | status administrasi siswa (Lunas / Belum Lunas) | ya |
 | 8 | `migrasi_mode_ujian.sql` | mode ujian per jadwal (Offline / Online) | ya |
+| 9 | `migrasi_jenis_ujian.sql` | jenis ujian jadi data master (menu Master > Jenis Ujian) | ya |
 
 Catatan:
 
@@ -33,5 +34,8 @@ Catatan:
   User Management lalu jalankan ulang file nomor 4.
 - Dump dari phpMyAdmin tidak menyimpan aturan CHECK (tabel `users` dan `trx_peserta`). Bila database dipulihkan
   dari dump, jalankan lagi nomor 4 dan 5, atau buat struktur dari `schema.sql` lalu impor datanya saja.
+- Nomor 9 harus dijalankan sebelum memakai aplikasi versi yang punya menu Jenis Ujian. Jenis ujian yang sudah
+  terlanjur dipakai jadwal tetapi bukan jenis bawaan ikut dimasukkan otomatis (nama lengkapnya sama dengan
+  kodenya, bisa dirapikan di menu Jenis Ujian).
 - Tabel `bak_trx_jadwal_ruangan` hanya cadangan dari migrasi nomor 3. Boleh dihapus setelah data
   penempatan dipastikan benar.
