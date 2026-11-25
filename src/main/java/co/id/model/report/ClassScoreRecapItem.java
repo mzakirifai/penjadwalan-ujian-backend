@@ -8,12 +8,31 @@ package co.id.model.report;
  * bukan di sisi Java.
  */
 public class ClassScoreRecapItem {
+    /** Nomor urut siswa di laporan (1, 2, 3, ...), sama untuk semua nilai milik siswa yang sama. */
+    private int rowNo;
+    private String nisn;
     private String nis;
     private String studentName;
     private String subjectName;
     private int score;
 
     public ClassScoreRecapItem() {
+    }
+
+    public int getRowNo() {
+        return rowNo;
+    }
+
+    public void setRowNo(int rowNo) {
+        this.rowNo = rowNo;
+    }
+
+    public String getNisn() {
+        return nisn;
+    }
+
+    public void setNisn(String nisn) {
+        this.nisn = nisn;
     }
 
     public String getNis() {

@@ -295,13 +295,13 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
     public List<ClassScoreRecapItem> getClassScoreRecapReport(int classroomId, String examType, String semester, String academicYear) {
         List<ClassScoreRecapItem> items = new ArrayList<>();
  
-        String sql = "SELECT s.nis, s.nama_siswa, CONCAT(m.nama_mapel, IF(ej.kode_guru IS NULL, '', CONCAT(' (', ej.kode_guru, ')'))) AS nama_mapel, es.nilai "
+        String sql = "SELECT s.id_siswa, s.nisn, s.nis, s.nama_siswa, CONCAT(m.nama_mapel, IF(ej.kode_guru IS NULL, '', CONCAT(' (', ej.kode_guru, ')'))) AS nama_mapel, es.nilai "
                 + "FROM trx_nilai es "
                 + "JOIN trx_jadwal ej ON es.id_ujian = ej.id_ujian "
                 + "JOIN mst_siswa s ON es.id_siswa = s.id_siswa "
                 + "JOIN mst_mapel m ON ej.id_mapel = m.id_mapel "
                 + "WHERE ej.id_kelas = ? AND ej.jenis_ujian = ? AND ej.semester = ? AND ej.tahun_akademik = ? "
-                + "ORDER BY s.nama_siswa, m.nama_mapel, ej.kode_guru";
+                + "ORDER BY s.nama_siswa, s.id_siswa, m.nama_mapel, ej.kode_guru";
  
         try (Connection connection = getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -312,8 +312,18 @@ public class ReportDAOImpl extends DatabaseConfiguration implements ReportDAO {
             preparedStatement.setString(4, academicYear);
  
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Nomor urut per siswa mengikuti urutan nama (sama seperti daftar hadir)
+                int rowNo = 0;
+                int lastStudentId = -1;
                 while (resultSet.next()) {
+                    int studentId = resultSet.getInt("id_siswa");
+                    if (studentId != lastStudentId) {
+                        rowNo++;
+                        lastStudentId = studentId;
+                    }
                     ClassScoreRecapItem item = new ClassScoreRecapItem();
+                    item.setRowNo(rowNo);
+                    item.setNisn(resultSet.getString("nisn"));
                     item.setNis(resultSet.getString("nis"));
                     item.setStudentName(resultSet.getString("nama_siswa"));
                     item.setSubjectName(resultSet.getString("nama_mapel"));
